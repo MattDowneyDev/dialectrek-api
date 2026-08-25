@@ -11,6 +11,9 @@ from languages.spanish.present_subjunctive_rules import (
     SUBJUNCTIVE_STEM_OVERRIDES,
     conjugate_subjunctive,
 )
+from languages.english.present_indicative_rules import (
+    conjugate_present as conjugate_english,
+)
 
 Mood = Literal["indicative", "subjunctive"]
 
@@ -59,20 +62,6 @@ def conjugate_by_mood(verb: str, pronoun_index: int, mood: Mood) -> str:
     if mood == "subjunctive":
         return conjugate_subjunctive(verb, pronoun_index)
     return conjugate(verb, pronoun_index)
-
-
-def conjugate_english(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive present-tense English conjugation, used only for display."""
-    base = infinitive_english.split("/")[0].strip()
-    if base.startswith("to "):
-        base = base[3:]
-    if pronoun_index != 2:
-        return base
-    if base.endswith(("o", "ch", "sh", "x", "z", "s")):
-        return base + "es"
-    if base.endswith("y") and base[-2:-1] not in "aeiou":
-        return base[:-1] + "ies"
-    return base + "s"
 
 
 @app.get("/get-all-verbs")
