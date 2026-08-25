@@ -99,7 +99,7 @@ def get_subjunctive_stem(verb, stem, ending):
     return stem
 
 
-def conjugate_subjunctive(verb, pronoun_index):
+def conjugate_present_subjunctive(verb, pronoun_index):
     verb = verb.strip().lower()
 
     # 1. Fully irregular subjunctive verbs

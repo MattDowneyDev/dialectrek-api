@@ -5,24 +5,34 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from languages.spanish.present_indicative_rules import IRREGULAR_VERBS, STEM_CHANGES, PRONOUNS, conjugate
+from languages.spanish.present_indicative_rules import (
+    IRREGULAR_VERBS,
+    STEM_CHANGES,
+    PRONOUNS,
+    conjugate_present_indicative,
+)
 from languages.spanish.present_subjunctive_rules import (
     IRREGULAR_SUBJUNCTIVE,
     SUBJUNCTIVE_STEM_OVERRIDES,
-    conjugate_subjunctive,
+    conjugate_present_subjunctive,
 )
 from languages.spanish.preterite_indicative_rules import (
     IRREGULAR_VERBS as PRETERITE_IRREGULAR_VERBS,
     STRONG_STEMS as PRETERITE_STRONG_STEMS,
     IR_STEM_CHANGES as PRETERITE_IR_STEM_CHANGES,
     I_TO_Y_VERBS as PRETERITE_I_TO_Y_VERBS,
-    conjugate_preterite,
+    conjugate_preterite_indicative,
 )
+from languages.spanish.imperfect_indicative_rules import (
+    IRREGULAR_VERBS as IMPERFECT_IRREGULAR_VERBS,
+    conjugate_imperfect_indicative,
+)
+from languages.spanish.imperfect_subjunctive_rules import conjugate_imperfect_subjunctive
 from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
 
 Mood = Literal["indicative", "subjunctive"]
-Tense = Literal["present", "preterite"]
+Tense = Literal["present", "preterite", "imperfect"]
 
 app = FastAPI()
 
@@ -55,14 +65,23 @@ def load_verbs():
         return json.load(f)
 
 
+def preterite_ellos(verb: str) -> str:
+    return conjugate_preterite_indicative(verb, 5)
+
+
 def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
-    if tense == "preterite":
+    # The imperfect subjunctive stem is derived directly from the
+    # preterite ellos/ustedes form, so it inherits preterite's
+    # irregularity classification exactly.
+    if tense == "preterite" or (tense == "imperfect" and mood == "subjunctive"):
         return (
             verb in PRETERITE_IRREGULAR_VERBS
             or verb in PRETERITE_STRONG_STEMS
             or verb in PRETERITE_IR_STEM_CHANGES
             or verb in PRETERITE_I_TO_Y_VERBS
         )
+    if tense == "imperfect":
+        return verb in IMPERFECT_IRREGULAR_VERBS
     if mood == "subjunctive":
         return (
             verb in IRREGULAR_SUBJUNCTIVE
@@ -79,14 +98,31 @@ def conjugate_by_tense_mood(verb: str, pronoun_index: int, mood: Mood, tense: Te
                 status_code=422,
                 detail="Preterite subjunctive is not supported.",
             )
-        return conjugate_preterite(verb, pronoun_index)
+        return conjugate_preterite_indicative(verb, pronoun_index)
+    if tense == "imperfect":
+        if mood == "subjunctive":
+            return conjugate_imperfect_subjunctive(
+                verb, pronoun_index, form="ra", preterite_lookup=preterite_ellos,
+            )
+        return conjugate_imperfect_indicative(verb, pronoun_index)
     if mood == "subjunctive":
-        return conjugate_subjunctive(verb, pronoun_index)
-    return conjugate(verb, pronoun_index)
+        return conjugate_present_subjunctive(verb, pronoun_index)
+    return conjugate_present_indicative(verb, pronoun_index)
+
+
+def imperfect_subjunctive_alt_form(verb: str, pronoun_index: int, mood: Mood, tense: Tense) -> str | None:
+    """The '-se' spelling, equally correct alongside the '-ra' form
+    returned by conjugate_by_tense_mood. Only applies to imperfect
+    subjunctive -- every other tense/mood combination has one spelling."""
+    if tense == "imperfect" and mood == "subjunctive":
+        return conjugate_imperfect_subjunctive(
+            verb, pronoun_index, form="se", preterite_lookup=preterite_ellos,
+        )
+    return None
 
 
 def conjugate_english(infinitive_english: str, pronoun_index: int, tense: Tense) -> str:
-    if tense == "preterite":
+    if tense in ("preterite", "imperfect"):
         return conjugate_past(infinitive_english, pronoun_index)
     return conjugate_present(infinitive_english, pronoun_index)
 
@@ -112,6 +148,7 @@ def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "p
             "pronoun_spanish": PRONOUNS[i],
             "pronoun_english": PRONOUNS_ENGLISH[i],
             "form_spanish": conjugate_by_tense_mood(verb_entry["spanish"], i, mood, tense),
+            "form_spanish_alt": imperfect_subjunctive_alt_form(verb_entry["spanish"], i, mood, tense),
             "form_english": conjugate_english(verb_entry["english"], i, tense),
         }
         for i in ALL_INDICES
@@ -142,6 +179,7 @@ def get_random_verb_conjugation(
     pronoun_index = random.choice(ALL_INDICES if use_vosotros else NON_VOSOTROS_INDICES)
 
     form_spanish = conjugate_by_tense_mood(verb["spanish"], pronoun_index, mood, tense)
+    form_spanish_alt = imperfect_subjunctive_alt_form(verb["spanish"], pronoun_index, mood, tense)
     form_english = conjugate_english(verb["english"], pronoun_index, tense)
 
     return [{
@@ -150,10 +188,14 @@ def get_random_verb_conjugation(
         "mood_english": mood,
         "mood_spanish": "subjuntivo" if mood == "subjunctive" else "indicativo",
         "tense_english": tense,
-        "tense_spanish": "pretérito" if tense == "preterite" else "presente",
+        "tense_spanish": {
+            "preterite": "pretérito",
+            "imperfect": "imperfecto",
+        }.get(tense, "presente"),
         "pronoun_spanish": PRONOUNS[pronoun_index],
         "pronoun_english": PRONOUNS_ENGLISH[pronoun_index],
         "form_spanish": form_spanish,
+        "form_spanish_alt": form_spanish_alt,
         "form_english": form_english,
     }]
 

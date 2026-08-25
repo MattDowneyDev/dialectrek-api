@@ -47,9 +47,9 @@ def add_stress_accent(stem):
 def conjugate_imperfect_subjunctive(verb, pronoun_index, form="ra", preterite_lookup=None):
     """
     preterite_lookup: a function(verb) -> preterite ellos/ustedes form,
-    e.g. your existing conjugate_preterite(verb, 5). Passing this in
-    keeps this module decoupled from your preterite engine, but wired
-    together they give you the full irregularity chain for free.
+    e.g. your existing conjugate_preterite_indicative(verb, 5). Passing
+    this in keeps this module decoupled from your preterite engine, but
+    wired together they give you the full irregularity chain for free.
     """
     verb = verb.strip().lower()
 

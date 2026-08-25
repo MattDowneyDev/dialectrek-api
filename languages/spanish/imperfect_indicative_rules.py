@@ -36,6 +36,10 @@ def conjugate_imperfect_indicative(verb, pronoun_index):
         return IRREGULAR_VERBS[verb][pronoun_index]
 
     ending = verb[-2:]
+    if ending == "ír":
+        # Accented -ír infinitives (oír, reír, ...) conjugate exactly like
+        # -ir verbs -- the accent is just a stress mark on the infinitive.
+        ending = "ir"
     if ending not in REGULAR_ENDINGS:
         raise ValueError(f"'{verb}' doesn't look like a valid infinitive (must end in -ar/-er/-ir)")
 
@@ -56,6 +60,8 @@ if __name__ == "__main__":
         ("ver", 2, "veía"),
         ("pensar", 0, "pensaba"),   # note: NOT "piensaba" -- no stem change here
         ("dormir", 5, "dormían"),   # note: NOT "durmían" -- no stem change here
+        ("oír", 0, "oía"),
+        ("oír", 3, "oíamos"),
     ]
     for verb, idx, expected in tests:
         result = conjugate_imperfect_indicative(verb, idx)

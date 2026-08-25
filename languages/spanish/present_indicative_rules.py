@@ -34,7 +34,7 @@ IRREGULAR_VERBS = {
 }
 
 
-def conjugate(verb, pronoun_index):
+def conjugate_present_indicative(verb, pronoun_index):
     verb = verb.strip().lower()
 
     # 1. Fully irregular verbs

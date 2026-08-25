@@ -89,7 +89,7 @@ def apply_stem_change(stem, change_type):
     return replace_last(stem, old, new)
 
 
-def conjugate_preterite(verb, pronoun_index):
+def conjugate_preterite_indicative(verb, pronoun_index):
     verb = verb.strip().lower()
 
     # 1. Fully irregular / suppletive verbs
