@@ -53,10 +53,13 @@ STRONG_PRETERITE_ENDINGS = ["e", "iste", "o", "imos", "isteis", "ieron"]
 # verb -> irregular strong stem the endings above attach to
 STRONG_STEMS = {
     "tener": "tuv",
+    "mantener": "mantuv",
     "estar": "estuv",
     "andar": "anduv",
+    "haber": "hub",
     "poder": "pud",
     "poner": "pus",
+    "suponer": "supus",
     "saber": "sup",
     "caber": "cup",
     "hacer": "hic",       # note: 3rd person sing. becomes "hizo", handled below
@@ -66,11 +69,12 @@ STRONG_STEMS = {
     "traer": "traj",      # same -j pattern
     "conducir": "conduj",
     "traducir": "traduj",
+    "producir": "produj",
 }
 
 # Verbs whose strong stem ends in "j" drop the "i" from the -ieron ending
 # (dijeron, not dijieron) and also from usted/ustedes irregular spots.
-J_STEM_VERBS = {"decir", "traer", "conducir", "traducir"}
+J_STEM_VERBS = {"decir", "traer", "conducir", "traducir", "producir"}
 
 # Fully irregular / suppletive verbs (don't fit any pattern above)
 IRREGULAR_VERBS = {
@@ -93,6 +97,10 @@ def conjugate_preterite(verb, pronoun_index):
         return IRREGULAR_VERBS[verb][pronoun_index]
 
     ending = verb[-2:]
+    if ending == "ír":
+        # Accented -ír infinitives (oír, reír, ...) conjugate exactly like
+        # -ir verbs -- the accent is just a stress mark on the infinitive.
+        ending = "ir"
     if ending not in REGULAR_ENDINGS:
         raise ValueError(f"'{verb}' doesn't look like a valid infinitive (must end in -ar/-er/-ir)")
 
@@ -118,6 +126,13 @@ def conjugate_preterite(verb, pronoun_index):
     if verb in I_TO_Y_VERBS and pronoun_index in (2, 5):
         base_ending = REGULAR_ENDINGS[ending][pronoun_index]  # "ió" or "ieron"
         return stem + base_ending.replace("i", "y", 1)
+
+    # 4b. Vowel-stem verbs (leer, caer, oír...) need an accent on the "i"
+    # in tú/nosotros/vosotros to keep it a separate syllable -- leíste,
+    # leímos, leísteis, not leiste, leimos, leisteis.
+    if verb in I_TO_Y_VERBS and pronoun_index in (1, 3, 4):
+        accented_endings = {1: "íste", 3: "ímos", 4: "ísteis"}
+        return stem + accented_endings[pronoun_index]
 
     # 5. Orthographic spelling shift -- yo form only
     if pronoun_index == 0:
