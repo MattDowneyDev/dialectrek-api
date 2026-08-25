@@ -28,11 +28,14 @@ from languages.spanish.imperfect_indicative_rules import (
     conjugate_imperfect_indicative,
 )
 from languages.spanish.imperfect_subjunctive_rules import conjugate_imperfect_subjunctive
+from languages.spanish.participle_rules import IRREGULAR_PARTICIPLES
+from languages.spanish.present_perfect_indicative_rules import conjugate_present_perfect_indicative
+from languages.spanish.present_perfect_subjunctive_rules import conjugate_present_perfect_subjunctive
 from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
 
 Mood = Literal["indicative", "subjunctive"]
-Tense = Literal["present", "preterite", "imperfect"]
+Tense = Literal["present", "preterite", "imperfect", "perfect"]
 
 app = FastAPI()
 
@@ -82,6 +85,10 @@ def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
         )
     if tense == "imperfect":
         return verb in IMPERFECT_IRREGULAR_VERBS
+    if tense == "perfect":
+        # haber itself doesn't vary by verb, so what makes a perfect-tense
+        # form "irregular" here is an irregular participle.
+        return verb in IRREGULAR_PARTICIPLES
     if mood == "subjunctive":
         return (
             verb in IRREGULAR_SUBJUNCTIVE
@@ -105,6 +112,10 @@ def conjugate_by_tense_mood(verb: str, pronoun_index: int, mood: Mood, tense: Te
                 verb, pronoun_index, form="ra", preterite_lookup=preterite_ellos,
             )
         return conjugate_imperfect_indicative(verb, pronoun_index)
+    if tense == "perfect":
+        if mood == "subjunctive":
+            return conjugate_present_perfect_subjunctive(verb, pronoun_index)
+        return conjugate_present_perfect_indicative(verb, pronoun_index)
     if mood == "subjunctive":
         return conjugate_present_subjunctive(verb, pronoun_index)
     return conjugate_present_indicative(verb, pronoun_index)
@@ -122,7 +133,7 @@ def imperfect_subjunctive_alt_form(verb: str, pronoun_index: int, mood: Mood, te
 
 
 def conjugate_english(infinitive_english: str, pronoun_index: int, tense: Tense) -> str:
-    if tense in ("preterite", "imperfect"):
+    if tense in ("preterite", "imperfect", "perfect"):
         return conjugate_past(infinitive_english, pronoun_index)
     return conjugate_present(infinitive_english, pronoun_index)
 
@@ -191,6 +202,7 @@ def get_random_verb_conjugation(
         "tense_spanish": {
             "preterite": "pretérito",
             "imperfect": "imperfecto",
+            "perfect": "perfecto",
         }.get(tense, "presente"),
         "pronoun_spanish": PRONOUNS[pronoun_index],
         "pronoun_english": PRONOUNS_ENGLISH[pronoun_index],
