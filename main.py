@@ -1,7 +1,7 @@
 import json
 import random
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from languages.spanish.rules import IRREGULAR_VERBS, STEM_CHANGES, PRONOUNS, conjugate
@@ -9,7 +9,9 @@ from languages.spanish.rules import IRREGULAR_VERBS, STEM_CHANGES, PRONOUNS, con
 app = FastAPI()
 
 origins = [
-    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    # TODO: add the production frontend URL here once it's deployed on Vercel.
 ]
 
 app.add_middleware(
@@ -59,6 +61,33 @@ def get_all_verbs():
     verbs_list = [[verb["spanish"], verb["english"]] for verb in verbs]
     verbs_list.sort()
     return verbs_list
+
+
+@app.get("/get-verb-conjugation")
+def get_verb_conjugation(verb: str):
+    verbs = load_verbs()
+    verb_entry = next((v for v in verbs if v["spanish"] == verb), None)
+
+    if verb_entry is None:
+        raise HTTPException(status_code=404, detail=f"Verb '{verb}' not found")
+
+    conjugations = [
+        {
+            "pronoun_spanish": PRONOUNS[i],
+            "pronoun_english": PRONOUNS_ENGLISH[i],
+            "form_spanish": conjugate(verb_entry["spanish"], i),
+            "form_english": conjugate_english(verb_entry["english"], i),
+        }
+        for i in ALL_INDICES
+    ]
+
+    return {
+        "infinitive_spanish": verb_entry["spanish"],
+        "infinitive_english": verb_entry["english"],
+        "mood_english": "indicative",
+        "tense_english": "present",
+        "conjugations": conjugations,
+    }
 
 
 @app.get("/get-random-verb-conjugation")
