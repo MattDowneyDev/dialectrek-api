@@ -34,6 +34,8 @@ from languages.spanish.conditional_indicative_rules import (
 from languages.spanish.conditional_perfect_indicative_rules import (
     conjugate_conditional_perfect_indicative,
 )
+from languages.spanish.future_indicative_rules import conjugate_future_indicative
+from languages.spanish.future_perfect_indicative_rules import conjugate_future_perfect_indicative
 from languages.spanish.imperative_rules import conjugate_imperative as conjugate_imperative_spanish
 from languages.spanish.imperfect_subjunctive_rules import conjugate_imperfect_subjunctive
 from languages.spanish.participle_rules import IRREGULAR_PARTICIPLES
@@ -43,13 +45,15 @@ from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
 from languages.english.conditional_rules import conjugate_conditional
 from languages.english.conditional_perfect_rules import conjugate_conditional_perfect
+from languages.english.future_rules import conjugate_future
+from languages.english.future_perfect_rules import conjugate_future_perfect
 from languages.english.imperative_rules import conjugate_imperative as conjugate_imperative_english
 
 Mood = Literal["indicative", "subjunctive"]
 Polarity = Literal["affirmative", "negative"]
 Tense = Literal[
-    "present", "preterite", "imperfect", "perfect", "conditional", "conditional_perfect",
-    "imperative",
+    "present", "preterite", "imperfect", "perfect", "future", "future_perfect",
+    "conditional", "conditional_perfect", "imperative",
 ]
 
 app = FastAPI()
@@ -112,9 +116,11 @@ def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
         )
     if tense == "imperfect":
         return verb in IMPERFECT_IRREGULAR_VERBS
-    if tense == "conditional":
+    if tense in ("conditional", "future"):
+        # Future and conditional build on the exact same modified stem
+        # for their irregulars (tener -> tendr-, hacer -> har-, ...).
         return verb in CONDITIONAL_IRREGULAR_STEMS
-    if tense in ("perfect", "conditional_perfect"):
+    if tense in ("perfect", "conditional_perfect", "future_perfect"):
         # haber itself doesn't vary by verb, so what makes a perfect-tense
         # form "irregular" here is an irregular participle.
         return verb in IRREGULAR_PARTICIPLES
@@ -164,6 +170,20 @@ def conjugate_by_tense_mood(
                 detail="Conditional perfect subjunctive is not supported.",
             )
         return conjugate_conditional_perfect_indicative(verb, pronoun_index)
+    if tense == "future":
+        if mood == "subjunctive":
+            raise HTTPException(
+                status_code=422,
+                detail="Future subjunctive is not supported.",
+            )
+        return conjugate_future_indicative(verb, pronoun_index)
+    if tense == "future_perfect":
+        if mood == "subjunctive":
+            raise HTTPException(
+                status_code=422,
+                detail="Future perfect subjunctive is not supported.",
+            )
+        return conjugate_future_perfect_indicative(verb, pronoun_index)
     if tense == "imperfect":
         if mood == "subjunctive":
             return conjugate_imperfect_subjunctive(
@@ -199,6 +219,10 @@ def conjugate_english(
         return conjugate_conditional_perfect(infinitive_english, pronoun_index)
     if tense == "conditional":
         return conjugate_conditional(infinitive_english, pronoun_index)
+    if tense == "future_perfect":
+        return conjugate_future_perfect(infinitive_english, pronoun_index)
+    if tense == "future":
+        return conjugate_future(infinitive_english, pronoun_index)
     if tense in ("preterite", "imperfect", "perfect"):
         return conjugate_past(infinitive_english, pronoun_index)
     return conjugate_present(infinitive_english, pronoun_index)
@@ -294,6 +318,8 @@ def get_random_verb_conjugation(
             "preterite": "pretérito",
             "imperfect": "imperfecto",
             "perfect": "perfecto",
+            "future": "futuro",
+            "future_perfect": "futuro perfecto",
             "conditional": "condicional",
             "conditional_perfect": "condicional perfecto",
             "imperative": "imperativo",
