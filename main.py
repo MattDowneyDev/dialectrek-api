@@ -41,19 +41,24 @@ from languages.spanish.imperfect_subjunctive_rules import conjugate_imperfect_su
 from languages.spanish.participle_rules import IRREGULAR_PARTICIPLES
 from languages.spanish.present_perfect_indicative_rules import conjugate_present_perfect_indicative
 from languages.spanish.present_perfect_subjunctive_rules import conjugate_present_perfect_subjunctive
+from languages.spanish.preterite_perfect_indicative_rules import conjugate_preterite_perfect_indicative
+from languages.spanish.pluperfect_indicative_rules import conjugate_pluperfect_indicative
+from languages.spanish.pluperfect_subjunctive_rules import conjugate_pluperfect_subjunctive
 from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
 from languages.english.conditional_rules import conjugate_conditional
 from languages.english.conditional_perfect_rules import conjugate_conditional_perfect
 from languages.english.future_rules import conjugate_future
 from languages.english.future_perfect_rules import conjugate_future_perfect
+from languages.english.past_perfect_rules import conjugate_past_perfect
 from languages.english.imperative_rules import conjugate_imperative as conjugate_imperative_english
 
 Mood = Literal["indicative", "subjunctive"]
 Polarity = Literal["affirmative", "negative"]
 Tense = Literal[
     "present", "preterite", "imperfect", "perfect", "future", "future_perfect",
-    "conditional", "conditional_perfect", "imperative",
+    "conditional", "conditional_perfect", "preterite_perfect", "pluperfect",
+    "imperative",
 ]
 
 app = FastAPI()
@@ -120,9 +125,13 @@ def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
         # Future and conditional build on the exact same modified stem
         # for their irregulars (tener -> tendr-, hacer -> har-, ...).
         return verb in CONDITIONAL_IRREGULAR_STEMS
-    if tense in ("perfect", "conditional_perfect", "future_perfect"):
-        # haber itself doesn't vary by verb, so what makes a perfect-tense
-        # form "irregular" here is an irregular participle.
+    if tense in (
+        "perfect", "conditional_perfect", "future_perfect", "preterite_perfect", "pluperfect",
+    ):
+        # haber itself doesn't vary by verb in any of these compounds --
+        # "hube"/"había"/"hubiera" are each fixed regardless of the main
+        # verb -- so what makes one of these forms "irregular" here is an
+        # irregular participle.
         return verb in IRREGULAR_PARTICIPLES
     if tense == "imperative":
         # Every imperative form except affirmative-tu is either a direct
@@ -194,19 +203,34 @@ def conjugate_by_tense_mood(
         if mood == "subjunctive":
             return conjugate_present_perfect_subjunctive(verb, pronoun_index)
         return conjugate_present_perfect_indicative(verb, pronoun_index)
+    if tense == "preterite_perfect":
+        if mood == "subjunctive":
+            raise HTTPException(
+                status_code=422,
+                detail="Preterite perfect subjunctive is not supported.",
+            )
+        return conjugate_preterite_perfect_indicative(verb, pronoun_index)
+    if tense == "pluperfect":
+        if mood == "subjunctive":
+            return conjugate_pluperfect_subjunctive(verb, pronoun_index, form="ra")
+        return conjugate_pluperfect_indicative(verb, pronoun_index)
     if mood == "subjunctive":
         return conjugate_present_subjunctive(verb, pronoun_index)
     return conjugate_present_indicative(verb, pronoun_index)
 
 
-def imperfect_subjunctive_alt_form(verb: str, pronoun_index: int, mood: Mood, tense: Tense) -> str | None:
+def subjunctive_ra_se_alt_form(verb: str, pronoun_index: int, mood: Mood, tense: Tense) -> str | None:
     """The '-se' spelling, equally correct alongside the '-ra' form
-    returned by conjugate_by_tense_mood. Only applies to imperfect
-    subjunctive -- every other tense/mood combination has one spelling."""
+    returned by conjugate_by_tense_mood. Only applies to the two
+    subjunctive tenses built on the '-ra'/'-se' stem (imperfect and
+    pluperfect subjunctive) -- every other tense/mood combination has
+    just one spelling."""
     if tense == "imperfect" and mood == "subjunctive":
         return conjugate_imperfect_subjunctive(
             verb, pronoun_index, form="se", preterite_lookup=preterite_ellos,
         )
+    if tense == "pluperfect" and mood == "subjunctive":
+        return conjugate_pluperfect_subjunctive(verb, pronoun_index, form="se")
     return None
 
 
@@ -223,6 +247,8 @@ def conjugate_english(
         return conjugate_future_perfect(infinitive_english, pronoun_index)
     if tense == "future":
         return conjugate_future(infinitive_english, pronoun_index)
+    if tense in ("preterite_perfect", "pluperfect"):
+        return conjugate_past_perfect(infinitive_english, pronoun_index)
     if tense in ("preterite", "imperfect", "perfect"):
         return conjugate_past(infinitive_english, pronoun_index)
     return conjugate_present(infinitive_english, pronoun_index)
@@ -266,7 +292,7 @@ def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "p
                 "pronoun_spanish": PRONOUNS[i],
                 "pronoun_english": PRONOUNS_ENGLISH[i],
                 "form_spanish": conjugate_by_tense_mood(verb_entry["spanish"], i, mood, tense),
-                "form_spanish_alt": imperfect_subjunctive_alt_form(verb_entry["spanish"], i, mood, tense),
+                "form_spanish_alt": subjunctive_ra_se_alt_form(verb_entry["spanish"], i, mood, tense),
                 "form_english": conjugate_english(verb_entry["english"], i, tense),
             }
             for i in ALL_INDICES
@@ -305,7 +331,7 @@ def get_random_verb_conjugation(
         pronoun_english = PRONOUNS_ENGLISH[pronoun_index]
 
     form_spanish = conjugate_by_tense_mood(verb["spanish"], pronoun_index, mood, tense, polarity)
-    form_spanish_alt = imperfect_subjunctive_alt_form(verb["spanish"], pronoun_index, mood, tense)
+    form_spanish_alt = subjunctive_ra_se_alt_form(verb["spanish"], pronoun_index, mood, tense)
     form_english = conjugate_english(verb["english"], pronoun_index, tense, polarity)
 
     return [{
@@ -322,6 +348,8 @@ def get_random_verb_conjugation(
             "future_perfect": "futuro perfecto",
             "conditional": "condicional",
             "conditional_perfect": "condicional perfecto",
+            "preterite_perfect": "pretérito anterior",
+            "pluperfect": "pluscuamperfecto",
             "imperative": "imperativo",
         }.get(tense, "presente"),
         "polarity_english": polarity,
