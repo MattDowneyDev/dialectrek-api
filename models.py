@@ -1,8 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class RandomVerbCriteria(BaseModel):
-    mood: str
     use_irregular: bool
     use_vosotros: bool
-    tenses: list[str]
