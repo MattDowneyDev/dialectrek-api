@@ -1,5 +1,6 @@
 import json
 import random
+from typing import Union
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,11 @@ from conjugation import (
     conjugate_imperative_spanish,
     is_irregular,
     subjunctive_ra_se_alt_form,
+)
+from models import (
+    ImperativeVerbConjugationResponse,
+    RandomConjugationRow,
+    VerbConjugationResponse,
 )
 
 app = FastAPI()
@@ -48,7 +54,7 @@ def load_verbs():
         return json.load(f)
 
 
-@app.get("/get-all-verbs")
+@app.get("/get-all-verbs", response_model=list[tuple[str, str]])
 def get_all_verbs():
     verbs = load_verbs()
     verbs_list = [[verb["spanish"], verb["english"]] for verb in verbs]
@@ -56,7 +62,10 @@ def get_all_verbs():
     return verbs_list
 
 
-@app.get("/get-verb-conjugation")
+@app.get(
+    "/get-verb-conjugation",
+    response_model=Union[VerbConjugationResponse, ImperativeVerbConjugationResponse],
+)
 def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "present"):
     verbs = load_verbs()
     verb_entry = next((v for v in verbs if v["spanish"] == verb), None)
@@ -101,7 +110,7 @@ def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "p
     }
 
 
-@app.get("/get-random-verb-conjugation")
+@app.get("/get-random-verb-conjugation", response_model=list[RandomConjugationRow])
 def get_random_verb_conjugation(
     use_irregular: bool,
     use_vosotros: bool,
