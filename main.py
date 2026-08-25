@@ -34,6 +34,7 @@ from languages.spanish.conditional_indicative_rules import (
 from languages.spanish.conditional_perfect_indicative_rules import (
     conjugate_conditional_perfect_indicative,
 )
+from languages.spanish.imperative_rules import conjugate_imperative as conjugate_imperative_spanish
 from languages.spanish.imperfect_subjunctive_rules import conjugate_imperfect_subjunctive
 from languages.spanish.participle_rules import IRREGULAR_PARTICIPLES
 from languages.spanish.present_perfect_indicative_rules import conjugate_present_perfect_indicative
@@ -42,10 +43,13 @@ from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
 from languages.english.conditional_rules import conjugate_conditional
 from languages.english.conditional_perfect_rules import conjugate_conditional_perfect
+from languages.english.imperative_rules import conjugate_imperative as conjugate_imperative_english
 
 Mood = Literal["indicative", "subjunctive"]
+Polarity = Literal["affirmative", "negative"]
 Tense = Literal[
     "present", "preterite", "imperfect", "perfect", "conditional", "conditional_perfect",
+    "imperative",
 ]
 
 app = FastAPI()
@@ -72,6 +76,18 @@ PRONOUNS_ENGLISH = ["I", "you", "he/she/you (usted)", "we", "you all (vosotros)"
 # Indices into PRONOUNS/PRONOUNS_ENGLISH used when vosotros is excluded
 NON_VOSOTROS_INDICES = [0, 1, 2, 3, 5]
 ALL_INDICES = [0, 1, 2, 3, 4, 5]
+
+# The imperative has no "yo" form -- you can't command yourself -- so
+# it uses its own index lists (and its own pronoun labels below) that
+# exclude index 0 entirely.
+IMPERATIVE_INDICES = [1, 2, 3, 4, 5]
+IMPERATIVE_NON_VOSOTROS_INDICES = [1, 2, 3, 5]
+
+# Imperative-specific pronoun labels: "el/ella/usted" and "ellos/ustedes"
+# collapse to their "you" reading only, since a command can't be
+# addressed to "he/she/they". Index 0 is a placeholder, never used.
+IMPERATIVE_PRONOUNS_SPANISH = ["", "tú", "usted", "nosotros", "vosotros", "ustedes"]
+IMPERATIVE_PRONOUNS_ENGLISH = ["", "you", "you (usted)", "let's", "you all (vosotros)", "you all (ustedes)"]
 
 
 def load_verbs():
@@ -102,6 +118,17 @@ def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
         # haber itself doesn't vary by verb, so what makes a perfect-tense
         # form "irregular" here is an irregular participle.
         return verb in IRREGULAR_PARTICIPLES
+    if tense == "imperative":
+        # Every imperative form except affirmative-tu is either a direct
+        # present-subjunctive form or "no" + one, so it inherits that
+        # tense's irregularity classification exactly. Affirmative-tu's
+        # own irregulars (decir, hacer, ir, ...) are already covered by
+        # this same set, so no separate check is needed for them.
+        return (
+            verb in IRREGULAR_SUBJUNCTIVE
+            or verb in SUBJUNCTIVE_STEM_OVERRIDES
+            or verb in STEM_CHANGES
+        )
     if mood == "subjunctive":
         return (
             verb in IRREGULAR_SUBJUNCTIVE
@@ -111,7 +138,11 @@ def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
     return verb in IRREGULAR_VERBS or verb in STEM_CHANGES
 
 
-def conjugate_by_tense_mood(verb: str, pronoun_index: int, mood: Mood, tense: Tense) -> str:
+def conjugate_by_tense_mood(
+    verb: str, pronoun_index: int, mood: Mood, tense: Tense, polarity: Polarity = "affirmative",
+) -> str:
+    if tense == "imperative":
+        return conjugate_imperative_spanish(verb, pronoun_index, polarity)
     if tense == "preterite":
         if mood == "subjunctive":
             raise HTTPException(
@@ -159,7 +190,11 @@ def imperfect_subjunctive_alt_form(verb: str, pronoun_index: int, mood: Mood, te
     return None
 
 
-def conjugate_english(infinitive_english: str, pronoun_index: int, tense: Tense) -> str:
+def conjugate_english(
+    infinitive_english: str, pronoun_index: int, tense: Tense, polarity: Polarity = "affirmative",
+) -> str:
+    if tense == "imperative":
+        return conjugate_imperative_english(infinitive_english, pronoun_index, polarity)
     if tense == "conditional_perfect":
         return conjugate_conditional_perfect(infinitive_english, pronoun_index)
     if tense == "conditional":
@@ -185,16 +220,33 @@ def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "p
     if verb_entry is None:
         raise HTTPException(status_code=404, detail=f"Verb '{verb}' not found")
 
-    conjugations = [
-        {
-            "pronoun_spanish": PRONOUNS[i],
-            "pronoun_english": PRONOUNS_ENGLISH[i],
-            "form_spanish": conjugate_by_tense_mood(verb_entry["spanish"], i, mood, tense),
-            "form_spanish_alt": imperfect_subjunctive_alt_form(verb_entry["spanish"], i, mood, tense),
-            "form_english": conjugate_english(verb_entry["english"], i, tense),
-        }
-        for i in ALL_INDICES
-    ]
+    if tense == "imperative":
+        # The imperative has no single "mood"-like axis the way other
+        # tenses do -- affirmative and negative are both worth seeing
+        # side by side on the same row, so this shape carries both
+        # instead of picking one via a query parameter.
+        conjugations = [
+            {
+                "pronoun_spanish": IMPERATIVE_PRONOUNS_SPANISH[i],
+                "pronoun_english": IMPERATIVE_PRONOUNS_ENGLISH[i],
+                "form_spanish_affirmative": conjugate_imperative_spanish(verb_entry["spanish"], i, "affirmative"),
+                "form_spanish_negative": conjugate_imperative_spanish(verb_entry["spanish"], i, "negative"),
+                "form_english_affirmative": conjugate_imperative_english(verb_entry["english"], i, "affirmative"),
+                "form_english_negative": conjugate_imperative_english(verb_entry["english"], i, "negative"),
+            }
+            for i in IMPERATIVE_INDICES
+        ]
+    else:
+        conjugations = [
+            {
+                "pronoun_spanish": PRONOUNS[i],
+                "pronoun_english": PRONOUNS_ENGLISH[i],
+                "form_spanish": conjugate_by_tense_mood(verb_entry["spanish"], i, mood, tense),
+                "form_spanish_alt": imperfect_subjunctive_alt_form(verb_entry["spanish"], i, mood, tense),
+                "form_english": conjugate_english(verb_entry["english"], i, tense),
+            }
+            for i in ALL_INDICES
+        ]
 
     return {
         "infinitive_spanish": verb_entry["spanish"],
@@ -211,6 +263,7 @@ def get_random_verb_conjugation(
     use_vosotros: bool,
     mood: Mood = "indicative",
     tense: Tense = "present",
+    polarity: Polarity = "affirmative",
 ):
     verbs = load_verbs()
 
@@ -218,11 +271,18 @@ def get_random_verb_conjugation(
         verbs = [verb for verb in verbs if not is_irregular(verb["spanish"], mood, tense)]
 
     verb = random.choice(verbs)
-    pronoun_index = random.choice(ALL_INDICES if use_vosotros else NON_VOSOTROS_INDICES)
+    if tense == "imperative":
+        pronoun_index = random.choice(IMPERATIVE_INDICES if use_vosotros else IMPERATIVE_NON_VOSOTROS_INDICES)
+        pronoun_spanish = IMPERATIVE_PRONOUNS_SPANISH[pronoun_index]
+        pronoun_english = IMPERATIVE_PRONOUNS_ENGLISH[pronoun_index]
+    else:
+        pronoun_index = random.choice(ALL_INDICES if use_vosotros else NON_VOSOTROS_INDICES)
+        pronoun_spanish = PRONOUNS[pronoun_index]
+        pronoun_english = PRONOUNS_ENGLISH[pronoun_index]
 
-    form_spanish = conjugate_by_tense_mood(verb["spanish"], pronoun_index, mood, tense)
+    form_spanish = conjugate_by_tense_mood(verb["spanish"], pronoun_index, mood, tense, polarity)
     form_spanish_alt = imperfect_subjunctive_alt_form(verb["spanish"], pronoun_index, mood, tense)
-    form_english = conjugate_english(verb["english"], pronoun_index, tense)
+    form_english = conjugate_english(verb["english"], pronoun_index, tense, polarity)
 
     return [{
         "infinitive_spanish": verb["spanish"],
@@ -236,9 +296,12 @@ def get_random_verb_conjugation(
             "perfect": "perfecto",
             "conditional": "condicional",
             "conditional_perfect": "condicional perfecto",
+            "imperative": "imperativo",
         }.get(tense, "presente"),
-        "pronoun_spanish": PRONOUNS[pronoun_index],
-        "pronoun_english": PRONOUNS_ENGLISH[pronoun_index],
+        "polarity_english": polarity,
+        "polarity_spanish": "negativo" if polarity == "negative" else "afirmativo",
+        "pronoun_spanish": pronoun_spanish,
+        "pronoun_english": pronoun_english,
         "form_spanish": form_spanish,
         "form_spanish_alt": form_spanish_alt,
         "form_english": form_english,
