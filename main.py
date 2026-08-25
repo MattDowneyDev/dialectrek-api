@@ -31,6 +31,9 @@ from languages.spanish.conditional_indicative_rules import (
     IRREGULAR_STEMS as CONDITIONAL_IRREGULAR_STEMS,
     conjugate_conditional_indicative,
 )
+from languages.spanish.conditional_perfect_indicative_rules import (
+    conjugate_conditional_perfect_indicative,
+)
 from languages.spanish.imperfect_subjunctive_rules import conjugate_imperfect_subjunctive
 from languages.spanish.participle_rules import IRREGULAR_PARTICIPLES
 from languages.spanish.present_perfect_indicative_rules import conjugate_present_perfect_indicative
@@ -38,9 +41,12 @@ from languages.spanish.present_perfect_subjunctive_rules import conjugate_presen
 from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
 from languages.english.conditional_rules import conjugate_conditional
+from languages.english.conditional_perfect_rules import conjugate_conditional_perfect
 
 Mood = Literal["indicative", "subjunctive"]
-Tense = Literal["present", "preterite", "imperfect", "perfect", "conditional"]
+Tense = Literal[
+    "present", "preterite", "imperfect", "perfect", "conditional", "conditional_perfect",
+]
 
 app = FastAPI()
 
@@ -92,7 +98,7 @@ def is_irregular(verb: str, mood: Mood, tense: Tense) -> bool:
         return verb in IMPERFECT_IRREGULAR_VERBS
     if tense == "conditional":
         return verb in CONDITIONAL_IRREGULAR_STEMS
-    if tense == "perfect":
+    if tense in ("perfect", "conditional_perfect"):
         # haber itself doesn't vary by verb, so what makes a perfect-tense
         # form "irregular" here is an irregular participle.
         return verb in IRREGULAR_PARTICIPLES
@@ -120,6 +126,13 @@ def conjugate_by_tense_mood(verb: str, pronoun_index: int, mood: Mood, tense: Te
                 detail="Conditional subjunctive is not supported.",
             )
         return conjugate_conditional_indicative(verb, pronoun_index)
+    if tense == "conditional_perfect":
+        if mood == "subjunctive":
+            raise HTTPException(
+                status_code=422,
+                detail="Conditional perfect subjunctive is not supported.",
+            )
+        return conjugate_conditional_perfect_indicative(verb, pronoun_index)
     if tense == "imperfect":
         if mood == "subjunctive":
             return conjugate_imperfect_subjunctive(
@@ -147,6 +160,8 @@ def imperfect_subjunctive_alt_form(verb: str, pronoun_index: int, mood: Mood, te
 
 
 def conjugate_english(infinitive_english: str, pronoun_index: int, tense: Tense) -> str:
+    if tense == "conditional_perfect":
+        return conjugate_conditional_perfect(infinitive_english, pronoun_index)
     if tense == "conditional":
         return conjugate_conditional(infinitive_english, pronoun_index)
     if tense in ("preterite", "imperfect", "perfect"):
@@ -220,6 +235,7 @@ def get_random_verb_conjugation(
             "imperfect": "imperfecto",
             "perfect": "perfecto",
             "conditional": "condicional",
+            "conditional_perfect": "condicional perfecto",
         }.get(tense, "presente"),
         "pronoun_spanish": PRONOUNS[pronoun_index],
         "pronoun_english": PRONOUNS_ENGLISH[pronoun_index],
