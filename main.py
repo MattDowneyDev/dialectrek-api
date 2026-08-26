@@ -5,25 +5,8 @@ from typing import Union
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from conjugation import (
-    ALL_INDICES,
-    IMPERATIVE_INDICES,
-    IMPERATIVE_NON_VOSOTROS_INDICES,
-    IMPERATIVE_PRONOUNS_ENGLISH,
-    IMPERATIVE_PRONOUNS_SPANISH,
-    NON_VOSOTROS_INDICES,
-    PRONOUNS,
-    PRONOUNS_ENGLISH,
-    Mood,
-    Polarity,
-    Tense,
-    conjugate_by_tense_mood,
-    conjugate_english,
-    conjugate_imperative_english,
-    conjugate_imperative_spanish,
-    is_irregular,
-    subjunctive_ra_se_alt_form,
-)
+from conjugation import Mood, Polarity, Tense
+from languages.registry import LanguageConfig, get_language
 from models import (
     ImperativeVerbConjugationResponse,
     RandomConjugationRow,
@@ -33,8 +16,8 @@ from models import (
 app = FastAPI()
 
 origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     # TODO: add the production frontend URL here once it's deployed on Vercel.
 ]
 
@@ -46,29 +29,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-VERBS_FILE = "./languages/spanish/verbs.json"
 
-
-def load_verbs():
-    with open(VERBS_FILE, encoding="utf-8") as f:
+def load_verbs(config: LanguageConfig):
+    with open(config.verbs_file, encoding="utf-8") as f:
         return json.load(f)
 
 
-@app.get("/get-all-verbs", response_model=list[tuple[str, str]])
-def get_all_verbs():
-    verbs = load_verbs()
-    verbs_list = [[verb["spanish"], verb["english"]] for verb in verbs]
+@app.get("/{language}/get-all-verbs", response_model=list[tuple[str, str]])
+def get_all_verbs(language: str):
+    config = get_language(language)
+    verbs = load_verbs(config)
+    verbs_list = [[verb[config.target_key], verb[config.source_key]] for verb in verbs]
     verbs_list.sort()
     return verbs_list
 
 
 @app.get(
-    "/get-verb-conjugation",
+    "/{language}/get-verb-conjugation",
     response_model=Union[VerbConjugationResponse, ImperativeVerbConjugationResponse],
 )
-def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "present"):
-    verbs = load_verbs()
-    verb_entry = next((v for v in verbs if v["spanish"] == verb), None)
+def get_verb_conjugation(
+    language: str, verb: str, mood: Mood = "indicative", tense: Tense = "present"
+):
+    config = get_language(language)
+    verbs = load_verbs(config)
+    verb_entry = next((v for v in verbs if v[config.target_key] == verb), None)
 
     if verb_entry is None:
         raise HTTPException(status_code=404, detail=f"Verb '{verb}' not found")
@@ -80,87 +65,93 @@ def get_verb_conjugation(verb: str, mood: Mood = "indicative", tense: Tense = "p
         # instead of picking one via a query parameter.
         conjugations = [
             {
-                "pronoun_spanish": IMPERATIVE_PRONOUNS_SPANISH[i],
-                "pronoun_english": IMPERATIVE_PRONOUNS_ENGLISH[i],
-                "form_spanish_affirmative": conjugate_imperative_spanish(verb_entry["spanish"], i, "affirmative"),
-                "form_spanish_negative": conjugate_imperative_spanish(verb_entry["spanish"], i, "negative"),
-                "form_english_affirmative": conjugate_imperative_english(verb_entry["english"], i, "affirmative"),
-                "form_english_negative": conjugate_imperative_english(verb_entry["english"], i, "negative"),
+                "pronoun_target": config.imperative_pronouns[i],
+                "pronoun_english": config.imperative_pronouns_english[i],
+                "form_target_affirmative": config.conjugate_imperative(
+                    verb_entry[config.target_key], i, "affirmative"
+                ),
+                "form_target_negative": config.conjugate_imperative(
+                    verb_entry[config.target_key], i, "negative"
+                ),
+                "form_english_affirmative": config.conjugate_imperative_english(
+                    verb_entry[config.source_key], i, "affirmative"
+                ),
+                "form_english_negative": config.conjugate_imperative_english(
+                    verb_entry[config.source_key], i, "negative"
+                ),
             }
-            for i in IMPERATIVE_INDICES
+            for i in config.imperative_indices
         ]
     else:
         conjugations = [
             {
-                "pronoun_spanish": PRONOUNS[i],
-                "pronoun_english": PRONOUNS_ENGLISH[i],
-                "form_spanish": conjugate_by_tense_mood(verb_entry["spanish"], i, mood, tense),
-                "form_spanish_alt": subjunctive_ra_se_alt_form(verb_entry["spanish"], i, mood, tense),
-                "form_english": conjugate_english(verb_entry["english"], i, tense),
+                "pronoun_target": config.pronouns[i],
+                "pronoun_english": config.pronouns_english[i],
+                "form_target": config.conjugate(verb_entry[config.target_key], i, mood, tense),
+                "form_target_alt": config.subjunctive_alt_form(
+                    verb_entry[config.target_key], i, mood, tense
+                ),
+                "form_english": config.conjugate_english(verb_entry[config.source_key], i, tense),
             }
-            for i in ALL_INDICES
+            for i in config.all_indices
         ]
 
     return {
-        "infinitive_spanish": verb_entry["spanish"],
-        "infinitive_english": verb_entry["english"],
-        "mood_english": mood,
-        "tense_english": tense,
+        "infinitive_target": verb_entry[config.target_key],
+        "infinitive_english": verb_entry[config.source_key],
+        "mood": mood,
+        "tense": tense,
         "conjugations": conjugations,
     }
 
 
-@app.get("/get-random-verb-conjugation", response_model=list[RandomConjugationRow])
+@app.get("/{language}/get-random-verb-conjugation", response_model=list[RandomConjugationRow])
 def get_random_verb_conjugation(
+    language: str,
     use_irregular: bool,
-    use_vosotros: bool,
+    use_regional_variant: bool,
     mood: Mood = "indicative",
     tense: Tense = "present",
     polarity: Polarity = "affirmative",
 ):
-    verbs = load_verbs()
+    config = get_language(language)
+    verbs = load_verbs(config)
 
     if not use_irregular:
-        verbs = [verb for verb in verbs if not is_irregular(verb["spanish"], mood, tense)]
+        verbs = [
+            verb for verb in verbs if not config.is_irregular(verb[config.target_key], mood, tense)
+        ]
 
     verb = random.choice(verbs)
     if tense == "imperative":
-        pronoun_index = random.choice(IMPERATIVE_INDICES if use_vosotros else IMPERATIVE_NON_VOSOTROS_INDICES)
-        pronoun_spanish = IMPERATIVE_PRONOUNS_SPANISH[pronoun_index]
-        pronoun_english = IMPERATIVE_PRONOUNS_ENGLISH[pronoun_index]
+        pronoun_index = random.choice(
+            config.imperative_indices
+            if use_regional_variant
+            else config.imperative_non_regional_indices
+        )
+        pronoun_target = config.imperative_pronouns[pronoun_index]
+        pronoun_english = config.imperative_pronouns_english[pronoun_index]
     else:
-        pronoun_index = random.choice(ALL_INDICES if use_vosotros else NON_VOSOTROS_INDICES)
-        pronoun_spanish = PRONOUNS[pronoun_index]
-        pronoun_english = PRONOUNS_ENGLISH[pronoun_index]
+        pronoun_index = random.choice(
+            config.all_indices if use_regional_variant else config.non_regional_indices
+        )
+        pronoun_target = config.pronouns[pronoun_index]
+        pronoun_english = config.pronouns_english[pronoun_index]
 
-    form_spanish = conjugate_by_tense_mood(verb["spanish"], pronoun_index, mood, tense, polarity)
-    form_spanish_alt = subjunctive_ra_se_alt_form(verb["spanish"], pronoun_index, mood, tense)
-    form_english = conjugate_english(verb["english"], pronoun_index, tense, polarity)
+    form_target = config.conjugate(verb[config.target_key], pronoun_index, mood, tense, polarity)
+    form_target_alt = config.subjunctive_alt_form(verb[config.target_key], pronoun_index, mood, tense)
+    form_english = config.conjugate_english(verb[config.source_key], pronoun_index, tense, polarity)
 
     return [{
-        "infinitive_spanish": verb["spanish"],
-        "infinitive_english": verb["english"],
-        "mood_english": mood,
-        "mood_spanish": "subjuntivo" if mood == "subjunctive" else "indicativo",
-        "tense_english": tense,
-        "tense_spanish": {
-            "preterite": "pretérito",
-            "imperfect": "imperfecto",
-            "perfect": "perfecto",
-            "future": "futuro",
-            "future_perfect": "futuro perfecto",
-            "conditional": "condicional",
-            "conditional_perfect": "condicional perfecto",
-            "preterite_perfect": "pretérito anterior",
-            "pluperfect": "pluscuamperfecto",
-            "imperative": "imperativo",
-        }.get(tense, "presente"),
-        "polarity_english": polarity,
-        "polarity_spanish": "negativo" if polarity == "negative" else "afirmativo",
-        "pronoun_spanish": pronoun_spanish,
+        "infinitive_target": verb[config.target_key],
+        "infinitive_english": verb[config.source_key],
+        "mood": mood,
+        "tense": tense,
+        "polarity": polarity,
+        "pronoun_target": pronoun_target,
         "pronoun_english": pronoun_english,
-        "form_spanish": form_spanish,
-        "form_spanish_alt": form_spanish_alt,
+        "form_target": form_target,
+        "form_target_alt": form_target_alt,
         "form_english": form_english,
     }]
 
