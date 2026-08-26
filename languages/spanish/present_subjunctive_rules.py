@@ -19,6 +19,12 @@ SUBJUNCTIVE_ENDINGS = {
 # carries through ALL SIX subjunctive forms -- not just yo.
 # verb -> irregular stem (yo indicative minus final "o")
 SUBJUNCTIVE_STEM_OVERRIDES = {
+    # ver's yo present indicative is "veo" (irregular -- keeps the stem
+    # vowel that regular -er verbs drop), not "vo". Without this override,
+    # the stem falls back to the infinitive-derived "v", producing
+    # "va/vas/va/..." -- an accident that happens to look like a chunk of
+    # "ir", but isn't a real form of "ver" at all.
+    "ver": "ve",
     "tener": "teng",
     "hacer": "hag",
     "decir": "dig",

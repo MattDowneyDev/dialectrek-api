@@ -81,6 +81,12 @@ IRREGULAR_VERBS = {
     "ser": ["fui", "fuiste", "fue", "fuimos", "fuisteis", "fueron"],
     "ir": ["fui", "fuiste", "fue", "fuimos", "fuisteis", "fueron"],  # identical to ser!
     "dar": ["di", "diste", "dio", "dimos", "disteis", "dieron"],    # takes -er/-ir endings despite being -ar
+    # ver's stem is just "v" (one letter), so the regular pattern's yo/él
+    # forms -- normally accented to mark stress, e.g. "beb-í", "viv-ió" --
+    # collapse to the monosyllables "ví"/"vió". Modern spelling doesn't
+    # accent monosyllables (same reason "dio" and "fue" have no accent),
+    # so the correct forms are "vi"/"vio".
+    "ver": ["vi", "viste", "vio", "vimos", "visteis", "vieron"],
 }
 
 
