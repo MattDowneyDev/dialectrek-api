@@ -13,7 +13,7 @@ from models import (
     VerbConjugationResponse,
 )
 
-app = FastAPI()
+app = FastAPI(title="DialecTrek API")
 
 origins = [
     "http://localhost:3000",
