@@ -48,6 +48,8 @@ from languages.spanish.pluperfect_indicative_rules import conjugate_pluperfect_i
 from languages.spanish.pluperfect_subjunctive_rules import conjugate_pluperfect_subjunctive
 from languages.english.present_indicative_rules import conjugate_present
 from languages.english.preterite_indicative_rules import conjugate_past
+from languages.english.imperfect_indicative_rules import conjugate_imperfect
+from languages.english.present_perfect_rules import conjugate_present_perfect
 from languages.english.conditional_rules import conjugate_conditional
 from languages.english.conditional_perfect_rules import conjugate_conditional_perfect
 from languages.english.future_rules import conjugate_future
@@ -64,7 +66,7 @@ Tense = Literal[
 ]
 
 # Present tense only pronoun labels, matching conjugator.PRONOUNS index order
-PRONOUNS_ENGLISH = ["I", "you", "he/she/you (usted)", "we", "you all (vosotros)", "they/you all (ustedes)"]
+PRONOUNS_ENGLISH = ["I", "you", "he/she/you", "we", "you all", "they/you all"]
 
 # Indices into PRONOUNS/PRONOUNS_ENGLISH used when vosotros is excluded
 NON_VOSOTROS_INDICES = [0, 1, 2, 3, 5]
@@ -80,7 +82,7 @@ IMPERATIVE_NON_VOSOTROS_INDICES = [1, 2, 3, 5]
 # collapse to their "you" reading only, since a command can't be
 # addressed to "he/she/they". Index 0 is a placeholder, never used.
 IMPERATIVE_PRONOUNS_SPANISH = ["", "tú", "usted", "nosotros", "vosotros", "ustedes"]
-IMPERATIVE_PRONOUNS_ENGLISH = ["", "you", "you (usted)", "let's", "you all (vosotros)", "you all (ustedes)"]
+IMPERATIVE_PRONOUNS_ENGLISH = ["", "you", "you (formal)", "let's", "you all", "you all (formal)"]
 
 # Tenses that only exist in the indicative mood: routing is a plain
 # tense -> conjugator lookup, and asking for the subjunctive of one of
@@ -105,8 +107,8 @@ ENGLISH_CONJUGATORS: dict[Tense, Callable[[str, int], str]] = {
     "preterite_perfect": conjugate_past_perfect,
     "pluperfect": conjugate_past_perfect,
     "preterite": conjugate_past,
-    "imperfect": conjugate_past,
-    "perfect": conjugate_past,
+    "imperfect": conjugate_imperfect,
+    "perfect": conjugate_present_perfect,
 }
 
 
