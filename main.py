@@ -18,7 +18,8 @@ app = FastAPI(title="DialecTrek API")
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    # TODO: add the production frontend URL here once it's deployed on Vercel.
+    "https://dialectrek.com",
+    "https://www.dialectrek.com",
 ]
 
 app.add_middleware(
