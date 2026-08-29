@@ -10,6 +10,7 @@ from languages.registry import LanguageConfig, get_language
 from models import (
     ImperativeVerbConjugationResponse,
     RandomConjugationRow,
+    RandomWord,
     VerbConjugationResponse,
 )
 
@@ -33,6 +34,11 @@ app.add_middleware(
 
 def load_verbs(config: LanguageConfig):
     with open(config.verbs_file, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_words(config: LanguageConfig):
+    with open(config.words_file, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -155,6 +161,20 @@ def get_random_verb_conjugation(
         "form_target_alt": form_target_alt,
         "form_english": form_english,
     }]
+
+
+@app.get("/{language}/get-random-word", response_model=RandomWord)
+def get_random_word(language: str):
+    config = get_language(language)
+    words = load_words(config)
+    word = random.choice(words)
+
+    return {
+        "rank": word["rank"],
+        "word_target": word[config.target_key],
+        "word_english": word[config.source_key],
+        "category": word["category"],
+    }
 
 
 if __name__ == "__main__":

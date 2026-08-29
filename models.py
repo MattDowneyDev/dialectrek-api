@@ -38,6 +38,13 @@ class ImperativeVerbConjugationResponse(BaseModel):
     conjugations: list[ImperativeConjugationRow]
 
 
+class RandomWord(BaseModel):
+    rank: int
+    word_target: str
+    word_english: str
+    category: str
+
+
 class RandomConjugationRow(BaseModel):
     infinitive_target: str
     infinitive_english: str

@@ -37,6 +37,7 @@ from conjugation import (
 class LanguageConfig:
     code: str
     verbs_file: str
+    words_file: str
     target_key: str
     source_key: str
     pronouns: list[str]
@@ -59,6 +60,7 @@ LANGUAGES: dict[str, LanguageConfig] = {
     "es": LanguageConfig(
         code="es",
         verbs_file="./languages/spanish/verbs.json",
+        words_file="./languages/spanish/words.json",
         target_key="spanish",
         source_key="english",
         pronouns=PRONOUNS,
