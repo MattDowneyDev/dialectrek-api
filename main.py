@@ -163,10 +163,21 @@ def get_random_verb_conjugation(
     }]
 
 
-@app.get("/{language}/get-random-word", response_model=RandomWord)
-def get_random_word(language: str):
+@app.get("/{language}/get-word-categories", response_model=list[str])
+def get_word_categories(language: str):
     config = get_language(language)
     words = load_words(config)
+    return sorted({word["category"] for word in words})
+
+
+@app.get("/{language}/get-random-word", response_model=RandomWord)
+def get_random_word(language: str, category: str | None = None):
+    config = get_language(language)
+    words = load_words(config)
+    if category is not None:
+        words = [word for word in words if word["category"] == category]
+        if not words:
+            raise HTTPException(status_code=404, detail="No words found for category")
     word = random.choice(words)
 
     return {
