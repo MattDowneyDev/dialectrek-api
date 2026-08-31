@@ -1,16 +1,10 @@
-"""
-Spanish Preterite Perfect Indicative -- Rule Set
-------------------------------------------------------
-hube hablado, hubiste hablado, hubo hablado, hubimos hablado, hubisteis
-hablado, hubieron hablado
+"""hube hablado, hubiste hablado, hubo hablado, hubimos hablado,
+hubisteis hablado, hubieron hablado
 
-A compound tense: preterite of "haber" (already correctly handled as
-one of the strong-stem preterite irregulars in preterite_indicative_rules,
-stem "hub-") + the past participle (participle_rules). Rare in modern
-speech (mostly literary, always preceded by a time conjunction like
-"en cuanto" or "cuando") but structurally identical to the other
-perfect compounds -- the only irregularity that can show up here is
-the same irregular-participle irregularity every perfect tense has.
+Preterite of "haber" (stem "hub-", one of the strong-stem preterite
+irregulars) + the past participle. Rare these days -- mostly literary,
+always after a time conjunction like "en cuanto" or "cuando" -- but
+built the same way as the other perfect compounds.
 """
 
 from languages.spanish.preterite_indicative_rules import conjugate_preterite_indicative

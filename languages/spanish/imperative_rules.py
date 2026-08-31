@@ -1,39 +1,34 @@
-"""
-Spanish Imperative -- Rule Set
-------------------------------------------
-The imperative has no "yo" form -- you can't command yourself -- so
-pronoun index 0 is never valid here. Callers are expected to skip it
-entirely rather than call conjugate_imperative with it.
+"""No "yo" form here -- you can't command yourself -- so pronoun index
+0 is never valid. Callers should just skip it rather than call
+conjugate_imperative with it.
 
-Two polarities, both built entirely out of pieces this app already
-has elsewhere:
+Everything below is built out of pieces this app already has
+elsewhere:
 
-AFFIRMATIVE
-  tu        -- the "el/ella/usted" PRESENT INDICATIVE form, except for
-               a small closed set of irregulars (di, haz, ve, pon,
-               sal, se, ten, ven, ...) that get a shortened form
-               instead.
-  usted     -- the "el/ella/usted" PRESENT SUBJUNCTIVE form.
-  nosotros  -- the "nosotros" PRESENT SUBJUNCTIVE form ("let's ..."),
-               except ir -> vamos (the "correct" subjunctive vayamos
-               exists, but vamos is what's actually used).
-  vosotros  -- the infinitive with its final -r replaced by -d. Always
-               regular -- there are no vosotros affirmative
-               irregulars in Spanish.
-  ustedes   -- the "ellos/ustedes" PRESENT SUBJUNCTIVE form.
+affirmative
+  tu        -- the él/ella/usted present indicative form, except a
+               small closed set of shortened irregulars (di, haz, ve,
+               pon, sal, sé, ten, ven, ...)
+  usted     -- él/ella/usted present subjunctive
+  nosotros  -- nosotros present subjunctive ("let's ..."), except
+               ir -> vamos (vayamos is the "correct" subjunctive, but
+               vamos is what people actually say)
+  vosotros  -- infinitive with the final -r swapped for -d, always
+               regular -- no vosotros affirmative irregulars in Spanish
+  ustedes   -- ellos/ustedes present subjunctive
 
-NEGATIVE
-  Every person -- including tu -- is just "no" + the matching PRESENT
-  SUBJUNCTIVE form. No irregulars of its own at all. This is why
-  "no vayas" (negative tu) looks nothing like "ve" (affirmative tu):
-  they're built from two completely different tenses.
+negative
+  every person, tu included, is just "no" + the matching present
+  subjunctive form, no irregulars of its own. That's why "no vayas"
+  (negative tu) looks nothing like "ve" (affirmative tu) -- they come
+  from two completely different tenses.
 """
 
 from languages.spanish.present_indicative_rules import conjugate_present_indicative
 from languages.spanish.present_subjunctive_rules import conjugate_present_subjunctive
 
-# Affirmative-tu irregulars: a closed set of shortened forms that
-# override the regular "el/ella/usted present indicative" pattern.
+# tu affirmative irregulars -- shortened forms that override the
+# regular él/ella/usted present indicative pattern.
 IRREGULAR_TU_AFFIRMATIVE = {
     "decir": "di",
     "hacer": "haz",

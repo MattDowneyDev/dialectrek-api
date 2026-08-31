@@ -1,19 +1,11 @@
-"""
-Spanish Future Indicative -- Rule Set
-------------------------------------------
-hablaré, hablarás, hablará, hablaremos, hablaréis, hablarán
+"""hablaré, hablarás, hablará, hablaremos, hablaréis, hablarán
 
-Formed by attaching endings straight onto the FULL INFINITIVE (unlike
-every other simple tense, which works off a stem) -- and -ar/-er/-ir
-verbs all take the exact same endings, so there's only one regular
-pattern to learn.
+Endings attach straight onto the full infinitive, not a stem -- same
+deal as the conditional. -ar/-er/-ir all take identical endings.
 
-The only irregulars are a small, closed set of verbs whose stem gets
-clipped or altered before the endings are added (tener -> tendr-,
-hacer -> har-, etc). These are the same twelve verbs (plus their
-compounds) that are irregular in the conditional tense, since both
-tenses build on the same modified stem -- so this module reuses that
-tense's IRREGULAR_STEMS table directly rather than duplicating it.
+Irregulars reuse conditional_indicative_rules.IRREGULAR_STEMS directly
+instead of duplicating it -- same twelve verbs, same modified stem,
+both tenses build on it.
 """
 
 from languages.spanish.common import PRONOUNS

@@ -1,13 +1,9 @@
-"""
-Spanish Present Perfect Indicative -- Rule Set
-------------------------------------------------
-he hablado, has hablado, ha hablado, hemos hablado, habéis hablado,
+"""he hablado, has hablado, ha hablado, hemos hablado, habéis hablado,
 han hablado
 
-A compound tense: present indicative of "haber" (already correctly
-handled as an irregular verb in present_indicative_rules) + the past
-participle (participle_rules). Nothing new to get wrong here as long
-as those two pieces are each right.
+Present indicative of "haber" (already handled as an irregular verb in
+present_indicative_rules) + the past participle. Nothing new to get
+wrong here as long as those two pieces are right.
 """
 
 from languages.spanish.present_indicative_rules import conjugate_present_indicative

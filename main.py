@@ -120,7 +120,9 @@ def get_verb_conjugation(
 def get_random_verb_conjugation(
     language: str,
     use_irregular: bool,
-    use_regional_variant: bool,
+    # only Spanish's setup wizard asks the vosotros question and sends
+    # this -- everyone else needs a default here or their requests 422
+    use_regional_variant: bool = False,
     mood: Mood = "indicative",
     tense: Tense = "present",
     polarity: Polarity = "affirmative",

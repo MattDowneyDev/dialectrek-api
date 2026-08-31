@@ -56,6 +56,42 @@ from languages.english.future_rules import conjugate_future
 from languages.english.future_perfect_rules import conjugate_future_perfect
 from languages.english.past_perfect_rules import conjugate_past_perfect
 from languages.english.imperative_rules import conjugate_imperative as conjugate_imperative_english
+from languages.french.conditional_indicative_rules import (
+    conjugate_conditional_indicative as conjugate_french_conditional_indicative,
+    is_irregular_conditional as is_french_conditional_irregular,
+)
+from languages.french.conditional_perfect_indicative_rules import (
+    conjugate_conditional_perfect_indicative as conjugate_french_conditional_perfect_indicative,
+)
+from languages.french.future_indicative_rules import (
+    conjugate_future_indicative as conjugate_french_future_indicative,
+    is_irregular_future as is_french_future_irregular,
+)
+from languages.french.future_perfect_indicative_rules import (
+    conjugate_future_perfect_indicative as conjugate_french_future_perfect_indicative,
+)
+from languages.french.imperative_rules import conjugate_imperative as conjugate_imperative_french
+from languages.french.imperfect_indicative_rules import (
+    conjugate_imperfect_indicative as conjugate_french_imperfect_indicative,
+    is_irregular_imperfect as is_french_imperfect_irregular,
+)
+from languages.french.participle_rules import is_irregular_participle as is_french_participle_irregular
+from languages.french.pluperfect_indicative_rules import (
+    conjugate_pluperfect_indicative as conjugate_french_pluperfect_indicative,
+)
+from languages.french.present_indicative_rules import (
+    conjugate_present_indicative as conjugate_french_present_indicative,
+    is_irregular_present as is_french_present_irregular,
+)
+from languages.french.present_perfect_indicative_rules import (
+    conjugate_present_perfect_indicative as conjugate_french_present_perfect_indicative,
+)
+from languages.french.present_perfect_subjunctive_rules import (
+    conjugate_present_perfect_subjunctive as conjugate_french_present_perfect_subjunctive,
+)
+from languages.french.present_subjunctive_rules import (
+    conjugate_present_subjunctive as conjugate_french_present_subjunctive,
+)
 
 Mood = Literal["indicative", "subjunctive"]
 Polarity = Literal["affirmative", "negative"]
@@ -83,6 +119,13 @@ IMPERATIVE_NON_VOSOTROS_INDICES = [1, 2, 3, 5]
 # addressed to "he/she/they". Index 0 is a placeholder, never used.
 IMPERATIVE_PRONOUNS_SPANISH = ["", "tú", "usted", "nosotros", "vosotros", "ustedes"]
 IMPERATIVE_PRONOUNS_ENGLISH = ["", "you", "you (formal)", "let's", "you all", "you all (formal)"]
+
+# French only has tu/nous/vous commands -- no "usted"-style formal
+# third person the way Spanish has, so indices 2 and 5 are placeholders
+# here too, alongside 0.
+FRENCH_IMPERATIVE_INDICES = [1, 3, 4]
+FRENCH_IMPERATIVE_PRONOUNS = ["", "tu", "", "nous", "vous", ""]
+FRENCH_IMPERATIVE_PRONOUNS_ENGLISH = ["", "you", "", "let's", "you all", ""]
 
 # Tenses that only exist in the indicative mood: routing is a plain
 # tense -> conjugator lookup, and asking for the subjunctive of one of
@@ -219,3 +262,61 @@ def conjugate_english(
         return conjugate_imperative_english(infinitive_english, pronoun_index, polarity)
     conjugator = ENGLISH_CONJUGATORS.get(tense, conjugate_present)
     return conjugator(infinitive_english, pronoun_index)
+
+
+# French doesn't have every tense built out yet -- anything not in
+# here 422s instead. Conditional has no subjunctive form in French at
+# all, so it only ever shows up in the indicative dict.
+FRENCH_INDICATIVE_CONJUGATORS: dict[Tense, Callable[[str, int], str]] = {
+    "present": conjugate_french_present_indicative,
+    "imperfect": conjugate_french_imperfect_indicative,
+    "perfect": conjugate_french_present_perfect_indicative,
+    "pluperfect": conjugate_french_pluperfect_indicative,
+    "future": conjugate_french_future_indicative,
+    "future_perfect": conjugate_french_future_perfect_indicative,
+    "conditional": conjugate_french_conditional_indicative,
+    "conditional_perfect": conjugate_french_conditional_perfect_indicative,
+}
+
+FRENCH_SUBJUNCTIVE_CONJUGATORS: dict[Tense, Callable[[str, int], str]] = {
+    "present": conjugate_french_present_subjunctive,
+    "perfect": conjugate_french_present_perfect_subjunctive,
+}
+
+
+def conjugate_french(
+    verb: str, pronoun_index: int, mood: Mood, tense: Tense, polarity: Polarity = "affirmative",
+) -> str:
+    if tense == "imperative":
+        return conjugate_imperative_french(verb, pronoun_index, polarity)
+
+    conjugators = FRENCH_SUBJUNCTIVE_CONJUGATORS if mood == "subjunctive" else FRENCH_INDICATIVE_CONJUGATORS
+    if tense not in conjugators:
+        display_tense = tense.replace("_", " ").capitalize()
+        display_mood = "" if mood == "indicative" else " subjunctive"
+        raise HTTPException(
+            status_code=422,
+            detail=f"{display_tense}{display_mood} is not supported for French yet.",
+        )
+    return conjugators[tense](verb, pronoun_index)
+
+
+def is_irregular_french(verb: str, mood: Mood, tense: Tense) -> bool:
+    if tense in ("imperfect",):
+        return is_french_imperfect_irregular(verb)
+    if tense in ("perfect", "pluperfect"):
+        return is_french_participle_irregular(verb)
+    if tense in ("future", "future_perfect"):
+        return is_french_future_irregular(verb)
+    if tense in ("conditional", "conditional_perfect"):
+        return is_french_conditional_irregular(verb)
+    # present, imperative, and the subjunctive tenses all key off the
+    # same present-tense irregularity -- that's the stem everything
+    # else here is built from
+    return is_french_present_irregular(verb)
+
+
+def no_subjunctive_alt_form(verb: str, pronoun_index: int, mood: Mood, tense: Tense) -> str | None:
+    """French has no tense with two equally-correct spellings the way
+    Spanish's '-ra'/'-se' subjunctive does, so this always returns None."""
+    return None

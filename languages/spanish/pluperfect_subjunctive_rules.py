@@ -1,17 +1,12 @@
-"""
-Spanish Pluperfect Subjunctive -- Rule Set
-------------------------------------------------------
-hubiera hablado, hubieras hablado, hubiera hablado, hubiéramos hablado,
-hubierais hablado, hubieran hablado
-(or, equally correct: hubiese hablado, hubieses hablado, ...)
+"""hubiera hablado, hubieras hablado, hubiera hablado, hubiéramos
+hablado, hubierais hablado, hubieran hablado (or hubiese hablado, ...
+-- equally correct)
 
-A compound tense: imperfect subjunctive of "haber" (imperfect_subjunctive_rules)
-+ the past participle (participle_rules). "haber" is a strong-stem
-preterite irregular (stem "hub-", ellos/ustedes form "hubieron"), and
-the imperfect subjunctive stem is always derived from that exact form
--- so the auxiliary here is fixed ("hubiera-"/"hubiese-") regardless of
-which verb is being conjugated. As with every other perfect compound,
-the only irregularity that can show up is an irregular participle.
+Imperfect subjunctive of "haber" + the past participle. haber is a
+strong-stem preterite irregular (stem "hub-", ellos/ustedes "hubieron"),
+and the imperfect subjunctive stem always comes from that form -- so
+the auxiliary here is always "hubiera-"/"hubiese-" no matter what verb
+you're conjugating. Only an irregular participle can trip this up.
 """
 
 from languages.spanish.preterite_indicative_rules import conjugate_preterite_indicative

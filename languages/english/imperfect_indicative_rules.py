@@ -1,18 +1,13 @@
-"""
-English Past Progressive -- Display Rules
-------------------------------------------------------------------
-The Spanish imperfect describes ongoing or habitual past action
-("hablaba" = "was speaking"), which reads more naturally -- and
-translates more instructively -- as the English past progressive
-than as the simple past ("spoke") preterite already uses. So this
-tense is "was/were" (matching person, same as the simple past's only
-person-dependent word) plus the verb's gerund.
+"""The Spanish imperfect describes ongoing/habitual past action
+("hablaba" = "was speaking"), which reads more naturally as the
+English past progressive than as simple past ("spoke", already used
+by the preterite). So this tense is "was/were" (matching person) plus
+the verb's gerund.
 
-"be" itself is left as plain "was/were" rather than "was being",
-since "be" glosses stative verbs (poder -> "to be able to") where
-the progressive of "be" reads as broken English ("was being able
-to"). That mirrors how the simple past also treats "be" as a bare
-BE_PAST_FORMS lookup with no participle.
+"be" stays plain "was/were" instead of "was being" -- "be" glosses
+stative verbs (poder -> "to be able to"), and "was being able to"
+reads as broken English. Same reason the simple past treats "be" as a
+bare BE_PAST_FORMS lookup with no participle.
 """
 
 from languages.english.gerund_rules import conjugate_gerund_word
@@ -20,10 +15,10 @@ from languages.english.preterite_indicative_rules import BE_PAST_FORMS
 
 
 def conjugate_imperfect(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive past-progressive conjugation of an English gloss, used only
-    for display. Picks the first "/"-separated translation; only the
-    verb's first word takes the gerund, since any words after it
-    (phrasal particles like "out"/"up"/"for") never change."""
+    """Rough past-progressive conjugation of an English gloss, display
+    only. Takes the first "/"-separated translation; only the verb's
+    first word takes the gerund -- phrasal particles like
+    "out"/"up"/"for" never change."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

@@ -1,18 +1,15 @@
-"""
-English Future -- Display Rules
-------------------------------------------------------------------
-"will" + the base form of the verb, unchanged across all six persons
-("I will eat", "she will eat", "we will eat", ...) -- so unlike
-present/past tense, there's no per-person form to work out here at
-all, just the infinitive stripped of "to".
+"""Just "will" + the base verb, same across all six persons ("I will
+eat", "she will eat", "we will eat", ...). Unlike present/past tense
+there's no per-person form to work out at all, just the infinitive
+with "to" stripped off.
 """
 
 
 def conjugate_future(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive future conjugation of an English gloss, used only for
-    display. Picks the first "/"-separated translation; "will" never
-    varies by person, so pronoun_index is accepted only for interface
-    consistency with the other conjugate_* functions."""
+    """Rough future conjugation of an English gloss, display only.
+    Takes the first "/"-separated translation. "will" never varies by
+    person, so pronoun_index is just here for interface consistency
+    with the other conjugate_* functions."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

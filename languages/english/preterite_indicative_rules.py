@@ -1,19 +1,15 @@
-"""
-English Simple Past Tense -- Display Rules
-------------------------------------------------------------------
-Unlike present tense, English past tense doesn't distinguish by
-person at all -- with one exception: "be" (was / were). So the real
-job here is picking the correct past-tense spelling of the verb.
+"""Unlike present tense, English past tense doesn't distinguish by
+person at all, except "be" (was/were). So the real job here is just
+picking the right past-tense spelling.
 
-That's NOT safe to derive purely from spelling. Most verbs just add
-"-ed" (or "-d"/"-ied" per the usual spelling rules), but a good
-number of common verbs are irregular (go -> went, have -> had), and
-some "regular" verbs double their final consonant in a way that only
-depends on where the stress falls (occur -> occurred, but
-enter -> entered, not "enterred") -- not something you can read off
-the letters alone. Guessing would silently produce wrong forms, so
-irregular and doubling verbs are listed explicitly; only genuinely
-predictable verbs fall through to the spelling rule.
+Can't derive that purely from spelling, though. Most verbs add "-ed"
+(or "-d"/"-ied"), but plenty are irregular (go -> went, have -> had),
+and some "regular" verbs double their final consonant depending on
+where the stress falls (occur -> occurred, but enter -> entered, not
+"enterred") -- not something you can read off the letters. Guessing
+would silently produce wrong forms, so irregular and doubling verbs
+are listed explicitly; only the genuinely predictable ones fall
+through to the spelling rule.
 """
 
 IRREGULAR_PAST = {
@@ -65,10 +61,10 @@ def conjugate_past_word(verb: str) -> str:
 
 
 def conjugate_past(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive simple-past conjugation of an English gloss, used only
-    for display. Picks the first "/"-separated translation; only the
-    verb's first word is conjugated, since any words after it
-    (phrasal particles like "out"/"up"/"for") never change."""
+    """Rough simple-past conjugation of an English gloss, display
+    only. Takes the first "/"-separated translation; only the verb's
+    first word is conjugated -- phrasal particles like
+    "out"/"up"/"for" never change."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

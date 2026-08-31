@@ -1,21 +1,17 @@
-"""
-English Future Perfect -- Display Rules
-------------------------------------------------------------------
-"will have" + the past participle (participle_rules), unchanged
-across all six persons -- just like the plain future, "will" never
-varies by person here either.
+"""Just "will have" + the past participle, same across all six
+persons -- "will" doesn't vary by person here, same as the plain
+future.
 """
 
 from languages.english.participle_rules import conjugate_past_participle_word
 
 
 def conjugate_future_perfect(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive future-perfect conjugation of an English gloss, used only
-    for display. Picks the first "/"-separated translation; only the
-    verb's first word takes the participle form, since any words after
-    it (phrasal particles like "out"/"up"/"for") never change.
-    pronoun_index is accepted only for interface consistency with the
-    other conjugate_* functions."""
+    """Rough future-perfect conjugation of an English gloss, display
+    only. Takes the first "/"-separated translation; only the verb's
+    first word takes the participle form -- phrasal particles like
+    "out"/"up"/"for" never change. pronoun_index is unused, just kept
+    for interface consistency with the other conjugate_* functions."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

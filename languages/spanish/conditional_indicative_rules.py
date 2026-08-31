@@ -1,18 +1,13 @@
-"""
-Spanish Conditional Indicative -- Rule Set
-------------------------------------------
-hablaría, hablarías, hablaría, hablaríamos, hablaríais, hablarían
+"""hablaría, hablarías, hablaría, hablaríamos, hablaríais, hablarían
 
-Formed by attaching endings straight onto the FULL INFINITIVE (unlike
-every other simple tense, which works off a stem) -- and -ar/-er/-ir
-verbs all take the exact same endings, so there's only one regular
-pattern to learn.
+Endings attach straight onto the full infinitive, not a stem -- the
+only simple tense that works this way. -ar/-er/-ir all take the same
+endings, so there's just one pattern to learn.
 
-The only irregulars are a small, closed set of verbs whose stem gets
-clipped or altered before the endings are added (tener -> tendr-,
-hacer -> har-, etc). These are the same twelve verbs (plus their
-compounds) that are irregular in the future tense, since both tenses
-build on the same modified stem.
+Irregulars are a small closed set of verbs with a clipped/altered stem
+(tener -> tendr-, hacer -> har-, ...) -- same twelve verbs (plus
+compounds) that are irregular in the future tense too, since both
+tenses build on the same modified stem.
 """
 
 from languages.spanish.common import PRONOUNS

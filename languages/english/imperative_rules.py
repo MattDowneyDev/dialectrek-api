@@ -1,23 +1,19 @@
-"""
-English Imperative -- Display Rules
-------------------------------------------------------------------
-English commands are just the bare verb ("speak!"), negated with
-"don't" ("don't speak!") -- no per-person variation at all, except
-"nosotros" ("let's speak" / "let's not speak"), which is really a
+"""English commands are just the bare verb ("speak!"), negated with
+"don't" ("don't speak!") -- no per-person variation at all except
+nosotros ("let's speak" / "let's not speak"), which is really a
 suggestion rather than a command aimed at someone else.
 """
 
-# Pronoun index for "nosotros", matching PRONOUNS index order. It's
-# the only person whose English phrasing ("let's ...") differs from
-# every other person's ("...!" / "don't ...!").
+# nosotros is the only person whose English phrasing ("let's ...")
+# differs from every other person's ("...!" / "don't ...!").
 NOSOTROS_INDEX = 3
 
 
 def conjugate_imperative(infinitive_english: str, pronoun_index: int, polarity: str) -> str:
-    """Naive imperative conjugation of an English gloss, used only for
-    display. Picks the first "/"-separated translation; only the
-    verb's first word is conjugated, since any words after it
-    (phrasal particles like "out"/"up"/"for") never change."""
+    """Rough imperative conjugation of an English gloss, display only.
+    Takes the first "/"-separated translation; only the verb's first
+    word is conjugated -- phrasal particles like "out"/"up"/"for"
+    never change."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

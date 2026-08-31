@@ -14,6 +14,9 @@ from fastapi import HTTPException
 
 from conjugation import (
     ALL_INDICES,
+    FRENCH_IMPERATIVE_INDICES,
+    FRENCH_IMPERATIVE_PRONOUNS,
+    FRENCH_IMPERATIVE_PRONOUNS_ENGLISH,
     IMPERATIVE_INDICES,
     IMPERATIVE_NON_VOSOTROS_INDICES,
     IMPERATIVE_PRONOUNS_ENGLISH,
@@ -26,10 +29,18 @@ from conjugation import (
     Tense,
     conjugate_by_tense_mood,
     conjugate_english,
+    conjugate_french,
     conjugate_imperative_english,
+    conjugate_imperative_french,
     conjugate_imperative_spanish,
     is_irregular,
+    is_irregular_french,
+    no_subjunctive_alt_form,
     subjunctive_ra_se_alt_form,
+)
+from languages.french.common import (
+    PRONOUNS as FRENCH_PRONOUNS,
+    PRONOUNS_ENGLISH as FRENCH_PRONOUNS_ENGLISH,
 )
 
 
@@ -88,9 +99,24 @@ LANGUAGES: dict[str, LanguageConfig] = {
     ),
     "fr": LanguageConfig(
         code="fr",
+        verbs_file="./languages/french/verbs.json",
         words_file="./languages/french/words.json",
         target_key="french",
         source_key="english",
+        pronouns=FRENCH_PRONOUNS,
+        pronouns_english=FRENCH_PRONOUNS_ENGLISH,
+        imperative_pronouns=FRENCH_IMPERATIVE_PRONOUNS,
+        imperative_pronouns_english=FRENCH_IMPERATIVE_PRONOUNS_ENGLISH,
+        all_indices=ALL_INDICES,
+        non_regional_indices=ALL_INDICES,
+        imperative_indices=FRENCH_IMPERATIVE_INDICES,
+        imperative_non_regional_indices=FRENCH_IMPERATIVE_INDICES,
+        conjugate=conjugate_french,
+        conjugate_imperative=conjugate_imperative_french,
+        conjugate_english=conjugate_english,
+        conjugate_imperative_english=conjugate_imperative_english,
+        is_irregular=is_irregular_french,
+        subjunctive_alt_form=no_subjunctive_alt_form,
     ),
 }
 

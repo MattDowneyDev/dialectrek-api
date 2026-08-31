@@ -1,27 +1,22 @@
-"""
-English Present Tense -- Display Rules
-------------------------------------------------------------------
-This isn't a full English conjugator. For nearly every English verb,
-present tense is identical to the infinitive for every person except
-"he/she/it" (pronoun index 2) -- so mostly the only real job here is
-producing that one third-person form.
+"""Not a full English conjugator. For nearly every verb, present tense
+matches the infinitive except for he/she/it (pronoun index 2), so
+really the only job here is producing that one third-person form.
 
-The one true exception is "be": am / are / is / are / are / are
-varies across ALL SIX persons, not just the third-person singular, so
-it needs its own per-pronoun table rather than the single-override
-trick that works for every other verb ("have" -> "has", etc.).
+"be" is the real exception: am/are/is/are/are/are varies across all
+six persons, not just third-person singular, so it gets its own
+per-pronoun table instead of the single-override trick used for
+everything else ("have" -> "has", etc).
 
-The dataset's `infinitive_english` values can be short phrases
-("go out", "be able to") or list multiple translations separated by
-"/" ("get up/raise"). Only the FIRST WORD of the chosen phrase is the
-verb -- the ending belongs there, not glued onto the end of the whole
-phrase ("go out" -> "goes out", never "go outs").
+`infinitive_english` values can be short phrases ("go out", "be able
+to") or multiple translations separated by "/" ("get up/raise"). Only
+the first word of the chosen phrase is the verb -- the ending goes
+there, not glued onto the whole phrase ("go out" -> "goes out", never
+"go outs").
 """
 
-# True exceptions to the regular spelling rules below, for the
-# third-person-singular form. "do" and "go" are irregular in speech
-# but land on the right spelling ("does", "goes") via the plain
-# -o/-es rule, so they don't need an entry here.
+# actual exceptions to the third-person spelling rule below -- "do"
+# and "go" are irregular in speech but the plain -o/-es rule already
+# spells them right ("does", "goes"), so they don't need an entry
 IRREGULAR_THIRD_PERSON = {
     "have": "has",
 }
@@ -43,10 +38,10 @@ def conjugate_third_person_word(verb: str) -> str:
 
 
 def conjugate_present(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive present-tense conjugation of an English gloss, used only
-    for display. Picks the first "/"-separated translation; for every
-    verb but "be", only the third-person-singular form (pronoun_index
-    == 2) differs from the infinitive."""
+    """Rough present-tense conjugation of an English gloss, display
+    only. Takes the first "/"-separated translation; for every verb
+    but "be", only third-person-singular (pronoun_index == 2) differs
+    from the infinitive."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

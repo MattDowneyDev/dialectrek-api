@@ -1,21 +1,17 @@
-"""
-English Past Participle -- Display Rules
-------------------------------------------------------------------
-Needed for the conditional perfect gloss ("would have spoken"). For
-regular verbs the past participle is spelled identically to the
-simple past (walked/walked), and that's true for most of this app's
-irregular verbs too (brought/brought, found/found, had/had, ...) --
-so conjugate_past_word already gets those right.
+"""Needed for the conditional perfect gloss ("would have spoken"). For
+regular verbs the participle matches the simple past (walked/walked),
+and that holds for most of this app's irregulars too (brought/brought,
+found/found, had/had, ...) -- conjugate_past_word already gets those
+right.
 
-Only a handful of verbs need a participle that actually differs from
+Only the handful of verbs whose participle actually differs from
 their simple-past spelling (spoke -> spoken, saw -> seen, went ->
-gone, ...); those are the only entries that belong here.
+gone, ...) need an entry below.
 """
 
 from languages.english.preterite_indicative_rules import conjugate_past_word
 
-# Only verbs whose past participle differs from their simple-past
-# form (conjugate_past_word) need an entry here.
+# verbs whose participle differs from conjugate_past_word's simple-past form
 IRREGULAR_PAST_PARTICIPLES = {
     "begin": "begun",
     "come": "come",
@@ -32,8 +28,8 @@ IRREGULAR_PAST_PARTICIPLES = {
     "write": "written",
 }
 
-# "be" -- invariable across every person, same as its simple-past
-# forms are person-dependent ("was"/"were") but its participle isn't.
+# "be"'s participle is invariable, unlike its person-dependent simple
+# past ("was"/"were").
 BE_PAST_PARTICIPLE = "been"
 
 

@@ -1,14 +1,9 @@
-"""
-Spanish Conditional Perfect Indicative -- Rule Set
-------------------------------------------------------
-habría hablado, habrías hablado, habría hablado, habríamos hablado,
+"""habría hablado, habrías hablado, habría hablado, habríamos hablado,
 habríais hablado, habrían hablado
 
-A compound tense: conditional of "haber" (conditional_indicative_rules)
-+ the past participle (participle_rules). Structurally identical to
-present_perfect_indicative_rules -- just with a different auxiliary
-tense -- so the only irregularity that can show up here is the same
-irregular-participle irregularity that "perfect" already has.
+Conditional of "haber" + the past participle. Same shape as the
+present perfect, just a different auxiliary tense -- so the only
+thing that can go wrong here is an irregular participle.
 """
 
 from languages.spanish.conditional_indicative_rules import conjugate_conditional_indicative

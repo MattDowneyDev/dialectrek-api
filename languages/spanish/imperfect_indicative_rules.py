@@ -1,26 +1,23 @@
-"""
-Spanish Imperfect Indicative -- Rule Set
-------------------------------------------
-The imperfect is the most regular tense in Spanish:
-  - No stem-changers (pensar, dormir, pedir all behave completely normally)
-  - No orthographic spelling shifts (-car/-gar/-zar verbs are unaffected)
-  - Only THREE irregular verbs in the entire language: ser, ir, ver
+"""The most regular tense in Spanish -- no stem-changers (pensar,
+dormir, pedir all behave completely normally), no -car/-gar/-zar
+spelling shifts, and just three irregular verbs in the whole
+language: ser, ir, ver.
 
-Because -er and -ir verbs share identical endings, there are really only
-two conjugation patterns to learn: -ar, and everything else.
+-er and -ir share identical endings here too, so really there are
+only two patterns to learn: -ar, and everything else.
 """
 
 from languages.spanish.common import PRONOUNS
 
 # Regular endings by infinitive ending.
-# Note -er and -ir are IDENTICAL here (unlike present tense).
+# -er and -ir are identical here (unlike present tense).
 REGULAR_ENDINGS = {
     "ar": ["aba", "abas", "aba", "ábamos", "abais", "aban"],
     "er": ["ía", "ías", "ía", "íamos", "íais", "ían"],
     "ir": ["ía", "ías", "ía", "íamos", "íais", "ían"],
 }
 
-# The only three irregular verbs in the imperfect indicative -- full stop.
+# the only three irregular verbs in the imperfect indicative -- full stop
 IRREGULAR_VERBS = {
     "ser": ["era", "eras", "era", "éramos", "erais", "eran"],
     "ir": ["iba", "ibas", "iba", "íbamos", "ibais", "iban"],
@@ -31,7 +28,7 @@ IRREGULAR_VERBS = {
 def conjugate_imperfect_indicative(verb, pronoun_index):
     verb = verb.strip().lower()
 
-    # 1. The only irregulars that exist in this tense
+    # 1. the only irregulars that exist in this tense
     if verb in IRREGULAR_VERBS:
         return IRREGULAR_VERBS[verb][pronoun_index]
 
@@ -45,7 +42,7 @@ def conjugate_imperfect_indicative(verb, pronoun_index):
 
     stem = verb[:-2]
 
-    # 2. Everything else is 100% regular -- no stem changes, no spelling shifts
+    # 2. everything else is completely regular -- no stem changes, no spelling shifts
     return stem + REGULAR_ENDINGS[ending][pronoun_index]
 
 

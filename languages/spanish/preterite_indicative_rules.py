@@ -10,8 +10,8 @@ REGULAR_ENDINGS = {
     "ir": ["í", "iste", "ió", "imos", "isteis", "ieron"],
 }
 
-# Orthographic spelling shifts -- ONLY affect the yo form in preterite
-# (unlike subjunctive, where they affect every form).
+# Spelling shifts -- only affect the yo form in preterite (unlike
+# subjunctive, where they affect every form).
 # -car -> qué, -gar -> gué, -zar -> cé
 SPELLING_SHIFTS_YO = {
     "car": ("c", "qu"),
@@ -19,9 +19,10 @@ SPELLING_SHIFTS_YO = {
     "zar": ("z", "c"),
 }
 
-# -IR stem-changers (NOT -ar/-er -- those are always regular in preterite):
-# change only in él/ella/usted and ellos/ustedes (indices 2 and 5),
-# and it's a WEAKER version of the present-tense change: e->i, o->u.
+# -ir stem-changers (not -ar/-er -- those are always regular in the
+# preterite): change only in él/ella/usted and ellos/ustedes (indices
+# 2 and 5), and it's a weaker version of the present-tense change:
+# e->i, o->u.
 IR_STEM_CHANGES = {
     "pedir": "e_i",
     "servir": "e_i",
@@ -46,8 +47,8 @@ STEM_CHANGE_MAP = {
 #  construir -> construyó/construyeron). Affects indices 2 and 5 only.
 I_TO_Y_VERBS = {"leer", "creer", "oír", "construir", "destruir", "incluir", "influir", "caer"}
 
-# "Strong stem" irregulars: these all share ONE special ending set
-# (no accents, different vowel pattern) regardless of -ar/-er/-ir.
+# "Strong stem" irregulars all share one special ending set (no
+# accents, different vowel pattern) regardless of -ar/-er/-ir.
 STRONG_PRETERITE_ENDINGS = ["e", "iste", "o", "imos", "isteis", "ieron"]
 
 # verb -> irregular strong stem the endings above attach to

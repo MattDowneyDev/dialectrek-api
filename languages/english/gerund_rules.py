@@ -1,15 +1,10 @@
-"""
-English Present Participle (Gerund) -- Display Rules
-------------------------------------------------------------------
-Needed for the imperfect gloss ("was speaking"). Regular verbs just
-take "-ing", with three spelling wrinkles: a silent trailing "e" is
-dropped (write -> writing, but see -> seeing, since "-ee" isn't a
-silent-e case), a verb ending in "-ie" swaps it for "y" (die ->
-dying), and a handful of one-syllable verbs ending in a single
-consonant double that consonant to keep the vowel short (get ->
-getting, stop -> stopping). Only the doubling cases need an explicit
-entry below -- everything else falls through to the predictable
-spelling rule.
+"""Needed for the imperfect gloss ("was speaking"). Regular verbs just
+take "-ing", with three spelling wrinkles: drop a silent trailing e
+(write -> writing, but see -> seeing -- "-ee" isn't a silent-e case),
+swap a trailing "-ie" for "y" (die -> dying), and double the final
+consonant on a handful of one-syllable verbs to keep the vowel short
+(get -> getting, stop -> stopping). Only the doubling verbs need an
+entry below -- everything else falls through to the spelling rule.
 """
 
 DOUBLED_CONSONANT_GERUNDS = {

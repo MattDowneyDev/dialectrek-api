@@ -1,12 +1,8 @@
-"""
-Spanish Present Perfect Subjunctive -- Rule Set
---------------------------------------------------
-haya hablado, hayas hablado, haya hablado, hayamos hablado, hayáis
+"""haya hablado, hayas hablado, haya hablado, hayamos hablado, hayáis
 hablado, hayan hablado
 
-A compound tense: present subjunctive of "haber" (already correctly
-handled as one of the six fully irregular subjunctive verbs in
-present_subjunctive_rules) + the past participle (participle_rules).
+Present subjunctive of "haber" (one of the six fully irregular
+subjunctive verbs) + the past participle.
 """
 
 from languages.spanish.present_subjunctive_rules import conjugate_present_subjunctive

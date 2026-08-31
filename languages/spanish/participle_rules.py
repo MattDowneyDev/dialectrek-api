@@ -1,28 +1,19 @@
-"""
-Spanish Past Participle -- Rule Set
-------------------------------------------
-Needed to build the perfect tenses: haber (conjugated) + participle
-(invariable -- it doesn't agree with anything here, unlike when a
-participle is used as an adjective).
+"""Needed for the perfect tenses: haber (conjugated) + participle. The
+participle itself is invariable here -- doesn't agree with anything,
+unlike when it's used as an adjective.
 
-Regular formation:
-  -ar verbs   -> -ado   (hablar -> hablado)
-  -er/-ir     -> -ido   (comer -> comido, vivir -> vivido)
+Regular: -ar -> -ado (hablado), -er/-ir -> -ido (comido, vivido).
 
--er/-ir verbs whose stem ends in a vowel need an accent on that "-ido"
-to keep it a separate syllable: leer -> leído, not "leido". This is
-the same phonological rule that shows up in these same verbs' preterite
-tú/nosotros/vosotros forms (leíste, leímos, leísteis).
+-er/-ir verbs with a stem ending in a vowel need an accent on "-ido"
+to keep it a separate syllable: leer -> leído, not "leido" -- same
+reason these verbs get an accent in their preterite tú/nosotros/
+vosotros forms (leíste, leímos, leísteis). A "gu"/"qu" stem doesn't
+count though -- that u is silent (guitar, queso), not a real vowel, so
+seguir -> seguido, not "seguído" (one syllable, se-GUI-do).
 
-Exception: a stem ending in "gu" or "qu" doesn't count -- that "u" is
-the silent one from the hard-g/k spelling convention (guitar, queso),
-not a real vowel forming a hiatus with the "i" that follows. seguir ->
-seguido, not "seguído" (it's pronounced se-GUI-do, one syllable "gui").
-
-A small closed set of participles is fully irregular and has to be
-memorized; this table also carries their common compounds (descubrir,
-suponer, devolver, ...) since a compound verb inherits its root verb's
-irregularity here.
+The rest is a closed set of irregulars to memorize below, including
+common compounds (descubrir, suponer, devolver, ...) since they
+inherit their root verb's irregular participle.
 """
 
 IRREGULAR_PARTICIPLES = {

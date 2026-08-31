@@ -1,26 +1,21 @@
-"""
-English Past Perfect -- Display Rules
-------------------------------------------------------------------
-"had" + the past participle (participle_rules), unchanged across all
-six persons -- just like "would (have)"/"will (have)", "had" never
-varies by person.
+"""Just "had" + the past participle, same across all six persons --
+"had" never varies by person, same as "would (have)"/"will (have)".
 
-English collapses several Spanish past-perfect-family tenses (preterite
-perfect, pluperfect indicative, pluperfect subjunctive) into this exact
-same gloss -- it has no separate "anterior" tense and no subjunctive
-mood distinction for the pluperfect, so all three share this function.
+English collapses several Spanish past-perfect tenses (preterite
+perfect, pluperfect indicative, pluperfect subjunctive) into this one
+gloss -- no separate "anterior" tense, no subjunctive distinction for
+the pluperfect, so all three share this function.
 """
 
 from languages.english.participle_rules import conjugate_past_participle_word
 
 
 def conjugate_past_perfect(infinitive_english: str, pronoun_index: int) -> str:
-    """Naive past-perfect conjugation of an English gloss, used only
-    for display. Picks the first "/"-separated translation; only the
-    verb's first word takes the participle form, since any words after
-    it (phrasal particles like "out"/"up"/"for") never change.
-    pronoun_index is accepted only for interface consistency with the
-    other conjugate_* functions."""
+    """Rough past-perfect conjugation of an English gloss, display
+    only. Takes the first "/"-separated translation; only the verb's
+    first word takes the participle form -- phrasal particles like
+    "out"/"up"/"for" never change. pronoun_index is unused, just kept
+    for interface consistency with the other conjugate_* functions."""
     base = infinitive_english.split("/")[0].strip()
     if base.startswith("to "):
         base = base[3:]

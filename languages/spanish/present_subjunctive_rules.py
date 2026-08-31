@@ -5,25 +5,25 @@ from languages.spanish.common import (
     replace_last,
 )
 
-# Subjunctive endings are the "opposite" of indicative: -ar verbs get e-endings,
-# -er/-ir verbs get a-endings. Applied to the SUBJUNCTIVE STEM (see below),
-# not the plain infinitive stem.
+# Subjunctive endings are basically the "opposite" of indicative: -ar
+# verbs get e-endings, -er/-ir verbs get a-endings. Applied to the
+# subjunctive stem (see below), not the plain infinitive stem.
 SUBJUNCTIVE_ENDINGS = {
     "ar": ["e", "es", "e", "emos", "éis", "en"],
     "er": ["a", "as", "a", "amos", "áis", "an"],
     "ir": ["a", "as", "a", "amos", "áis", "an"],
 }
 
-# Key difference from indicative: the subjunctive stem is built from the
-# YO form of the present indicative (drop the -o), so any yo-irregularity
-# carries through ALL SIX subjunctive forms -- not just yo.
-# verb -> irregular stem (yo indicative minus final "o")
+# The subjunctive stem is built from the yo form of the present
+# indicative (drop the final -o), so any yo-irregularity carries
+# through all six subjunctive forms, not just yo.
+# verb -> irregular stem (yo indicative minus the final "o")
 SUBJUNCTIVE_STEM_OVERRIDES = {
-    # ver's yo present indicative is "veo" (irregular -- keeps the stem
-    # vowel that regular -er verbs drop), not "vo". Without this override,
-    # the stem falls back to the infinitive-derived "v", producing
-    # "va/vas/va/..." -- an accident that happens to look like a chunk of
-    # "ir", but isn't a real form of "ver" at all.
+    # ver's yo present indicative is "veo" (keeps the stem vowel that
+    # regular -er verbs drop), not "vo" -- without this override the
+    # stem falls back to the infinitive-derived "v", giving you
+    # "va/vas/va/...", which just looks like a piece of "ir" and isn't
+    # a real form of ver at all.
     "ver": "ve",
     "tener": "teng",
     "hacer": "hag",
@@ -41,12 +41,12 @@ SUBJUNCTIVE_STEM_OVERRIDES = {
     "traducir": "traduzc",
 }
 
-# Stem-changing verbs: same primary change as indicative, applied to all
-# forms EXCEPT nosotros/vosotros (indices 3 and 4). Verb list and vowel
-# map are shared with present_indicative_rules (see common.py) -- both
-# tenses classify these verbs identically.
+# Stem-changing verbs: same primary change as indicative, applied to
+# every form except nosotros/vosotros (indices 3 and 4). Verb list and
+# vowel map are shared with present_indicative_rules (see common.py)
+# -- both tenses classify these verbs identically.
 
-# -IR stem-changers get a SECOND, weaker change in nosotros/vosotros
+# -ir stem-changers get a second, weaker change in nosotros/vosotros
 # (indices 3, 4) instead of staying fully regular there.
 # dormir -> durmamos/durmáis, pedir -> pidamos/pidáis, sentir -> sintamos/sintáis
 SECONDARY_IR_CHANGE = {
@@ -55,9 +55,9 @@ SECONDARY_IR_CHANGE = {
     "e_i": ("e", "i"),  # already the same vowel, so no visible change
 }
 
-# Orthographic (spelling) shifts to preserve pronunciation.
-# These apply to ALL SIX forms in the subjunctive (unlike indicative,
-# where -car/-gar/-zar only matters in the preterite yo form).
+# Spelling shifts to preserve pronunciation. These apply to all six
+# forms in the subjunctive (unlike indicative, where -car/-gar/-zar
+# only matters in the preterite yo form).
 SPELLING_SHIFTS = {
     "car": ("c", "qu"),
     "gar": ("g", "gu"),
@@ -133,10 +133,10 @@ def conjugate_present_subjunctive(verb, pronoun_index):
             stem = apply_secondary_change(stem, change_type)
 
         # -guir verbs (seguir, conseguir): the e->i change leaves a silent
-        # "u" that's now sitting before an "a"-type ending. "sigu"+"a" would
-        # read as "sigua" (/sigwa/), which is wrong -- it must be "siga".
-        # Every present-subjunctive -ir ending starts with "a", so this
-        # applies to all six forms, unlike the indicative (yo-form only).
+        # "u" sitting before an "a"-type ending -- "sigu"+"a" would read
+        # as "sigua" (/sigwa/), but it needs to be "siga". Every present-
+        # subjunctive -ir ending starts with "a", so this hits all six
+        # forms here, unlike the indicative where it's yo-form only.
         if verb.endswith("guir") and stem.endswith("gu"):
             stem = stem[:-1]
 

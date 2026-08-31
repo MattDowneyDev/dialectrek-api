@@ -1,15 +1,9 @@
-"""
-Spanish Pluperfect Indicative -- Rule Set
-------------------------------------------------------
-había hablado, habías hablado, había hablado, habíamos hablado, habíais
-hablado, habían hablado
+"""había hablado, habías hablado, había hablado, habíamos hablado,
+habíais hablado, habían hablado
 
-A compound tense: imperfect of "haber" (regular in the imperfect --
-only ser/ir/ver are irregular there, and haber isn't one of them) +
-the past participle (participle_rules). Structurally identical to
-present_perfect_indicative_rules -- just with a different auxiliary
-tense -- so the only irregularity that can show up here is the same
-irregular-participle irregularity that "perfect" already has.
+Imperfect of "haber" (regular there -- only ser/ir/ver are irregular
+in the imperfect, and haber isn't one of them) + the past participle.
+Same shape as the present perfect, just a different auxiliary tense.
 """
 
 from languages.spanish.imperfect_indicative_rules import conjugate_imperfect_indicative

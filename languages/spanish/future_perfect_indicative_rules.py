@@ -1,14 +1,9 @@
-"""
-Spanish Future Perfect Indicative -- Rule Set
-------------------------------------------------------
-habré hablado, habrás hablado, habrá hablado, habremos hablado,
+"""habré hablado, habrás hablado, habrá hablado, habremos hablado,
 habréis hablado, habrán hablado
 
-A compound tense: future of "haber" (future_indicative_rules) + the
-past participle (participle_rules). Structurally identical to
-present_perfect_indicative_rules -- just with a different auxiliary
-tense -- so the only irregularity that can show up here is the same
-irregular-participle irregularity that "perfect" already has.
+Future of "haber" + the past participle. Same shape as the present
+perfect, just a different auxiliary tense -- only an irregular
+participle can trip this up.
 """
 
 from languages.spanish.future_indicative_rules import conjugate_future_indicative
