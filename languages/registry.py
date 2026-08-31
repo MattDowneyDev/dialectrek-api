@@ -7,7 +7,7 @@ entry to LANGUAGES (plus its own languages/<name>/ engine + verbs.json)
 -- no changes to main.py's route handlers themselves.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from fastapi import HTTPException
@@ -36,24 +36,32 @@ from conjugation import (
 @dataclass
 class LanguageConfig:
     code: str
-    verbs_file: str
     words_file: str
     target_key: str
     source_key: str
-    pronouns: list[str]
-    pronouns_english: list[str]
-    imperative_pronouns: list[str]
-    imperative_pronouns_english: list[str]
-    all_indices: list[int]
-    non_regional_indices: list[int]
-    imperative_indices: list[int]
-    imperative_non_regional_indices: list[int]
-    conjugate: Callable[[str, int, Mood, Tense, Polarity], str]
-    conjugate_imperative: Callable[[str, int, Polarity], str]
-    conjugate_english: Callable[[str, int, Tense, Polarity], str]
-    conjugate_imperative_english: Callable[[str, int, Polarity], str]
-    is_irregular: Callable[[str, Mood, Tense], bool]
-    subjunctive_alt_form: Callable[[str, int, Mood, Tense], Optional[str]]
+    # Verb conjugation isn't built out for every language yet (each one
+    # needs its own rule engine, see conjugation.py) -- a language with
+    # only `words_file` set supports flashcards but not the verbs/conjugate
+    # routes, which check `has_verbs` before touching the fields below.
+    verbs_file: Optional[str] = None
+    pronouns: list[str] = field(default_factory=list)
+    pronouns_english: list[str] = field(default_factory=list)
+    imperative_pronouns: list[str] = field(default_factory=list)
+    imperative_pronouns_english: list[str] = field(default_factory=list)
+    all_indices: list[int] = field(default_factory=list)
+    non_regional_indices: list[int] = field(default_factory=list)
+    imperative_indices: list[int] = field(default_factory=list)
+    imperative_non_regional_indices: list[int] = field(default_factory=list)
+    conjugate: Optional[Callable[[str, int, Mood, Tense, Polarity], str]] = None
+    conjugate_imperative: Optional[Callable[[str, int, Polarity], str]] = None
+    conjugate_english: Optional[Callable[[str, int, Tense, Polarity], str]] = None
+    conjugate_imperative_english: Optional[Callable[[str, int, Polarity], str]] = None
+    is_irregular: Optional[Callable[[str, Mood, Tense], bool]] = None
+    subjunctive_alt_form: Optional[Callable[[str, int, Mood, Tense], Optional[str]]] = None
+
+    @property
+    def has_verbs(self) -> bool:
+        return self.verbs_file is not None
 
 
 LANGUAGES: dict[str, LanguageConfig] = {
@@ -77,6 +85,12 @@ LANGUAGES: dict[str, LanguageConfig] = {
         conjugate_imperative_english=conjugate_imperative_english,
         is_irregular=is_irregular,
         subjunctive_alt_form=subjunctive_ra_se_alt_form,
+    ),
+    "fr": LanguageConfig(
+        code="fr",
+        words_file="./languages/french/words.json",
+        target_key="french",
+        source_key="english",
     ),
 }
 

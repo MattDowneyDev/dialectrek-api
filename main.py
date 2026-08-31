@@ -45,6 +45,8 @@ def load_words(config: LanguageConfig):
 @app.get("/{language}/get-all-verbs", response_model=list[tuple[str, str]])
 def get_all_verbs(language: str):
     config = get_language(language)
+    if not config.has_verbs:
+        raise HTTPException(status_code=404, detail=f"Verbs not available yet for '{language}'")
     verbs = load_verbs(config)
     verbs_list = [[verb[config.target_key], verb[config.source_key]] for verb in verbs]
     verbs_list.sort()
@@ -59,6 +61,8 @@ def get_verb_conjugation(
     language: str, verb: str, mood: Mood = "indicative", tense: Tense = "present"
 ):
     config = get_language(language)
+    if not config.has_verbs:
+        raise HTTPException(status_code=404, detail=f"Verbs not available yet for '{language}'")
     verbs = load_verbs(config)
     verb_entry = next((v for v in verbs if v[config.target_key] == verb), None)
 
@@ -122,6 +126,8 @@ def get_random_verb_conjugation(
     polarity: Polarity = "affirmative",
 ):
     config = get_language(language)
+    if not config.has_verbs:
+        raise HTTPException(status_code=404, detail=f"Verbs not available yet for '{language}'")
     verbs = load_verbs(config)
 
     if not use_irregular:
