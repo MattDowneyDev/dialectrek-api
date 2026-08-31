@@ -1,5 +1,6 @@
 import json
 import random
+import unicodedata
 from typing import Union
 
 from fastapi import FastAPI, HTTPException
@@ -32,6 +33,14 @@ app.add_middleware(
 )
 
 
+def alphabetic_sort_key(word: str) -> tuple[str, str]:
+    # plain code-point sort puts accented letters (e.g. é) after z, so fold
+    # accents to their base letter for ordering and keep the original as a
+    # tiebreaker
+    folded = unicodedata.normalize("NFKD", word).encode("ascii", "ignore").decode("ascii")
+    return (folded.lower(), word)
+
+
 def load_verbs(config: LanguageConfig):
     with open(config.verbs_file, encoding="utf-8") as f:
         return json.load(f)
@@ -49,7 +58,7 @@ def get_all_verbs(language: str):
         raise HTTPException(status_code=404, detail=f"Verbs not available yet for '{language}'")
     verbs = load_verbs(config)
     verbs_list = [[verb[config.target_key], verb[config.source_key]] for verb in verbs]
-    verbs_list.sort()
+    verbs_list.sort(key=lambda pair: alphabetic_sort_key(pair[0]))
     return verbs_list
 
 
