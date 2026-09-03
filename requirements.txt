@@ -1,3 +1,6 @@
 fastapi~=0.110.2
 pydantic~=2.7.1
 mangum~=0.17.0
+sqlalchemy~=2.0.52
+requests~=2.34.2
+python-dotenv~=1.2.3
