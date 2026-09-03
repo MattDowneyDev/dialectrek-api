@@ -14,8 +14,10 @@ from models import (
     RandomWord,
     VerbConjugationResponse,
 )
+from watch import router as watch_router
 
 app = FastAPI(title="DialecTrek API")
+app.include_router(watch_router)
 
 origins = [
     "http://localhost:3000",
@@ -28,7 +30,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
