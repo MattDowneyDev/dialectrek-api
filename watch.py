@@ -1,17 +1,21 @@
+import os
 import random
 from datetime import datetime, timezone
 from typing import Literal
 
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import ForeignKey, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-# SQLite is plenty for local dev -- a single file, no server to run. Swap
-# DATABASE_URL for a real Postgres connection string once this is actually
-# deployed somewhere.
-DATABASE_URL = "sqlite:///./watch.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+load_dotenv()
+
+# DATABASE_URL points at Neon in production (set as a Lambda env var) and
+# falls back to a local SQLite file so nobody needs a real DB for dev.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./watch.db")
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 # Starting rating for a video with no comparisons yet, and how many points a
@@ -186,20 +190,36 @@ def compare_videos(
     video = get_video_or_404(db, language, video_id)
     previous = get_video_or_404(db, language, body.previous_video_id)
 
-    if body.result != "same":
-        delta = RATING_STEP if body.result == "harder" else -RATING_STEP
-        video.difficulty_score += delta
-        previous.difficulty_score -= delta
-
-    db.add(
-        ComparisonRow(
-            video_id=video_id,
-            previous_video_id=body.previous_video_id,
-            result=body.result,
-            session_id=body.session_id,
+    # Same dedupe idea as toggle_like, but a compare isn't a toggle -- once a
+    # session has voted on this pair, in either order, later attempts are a
+    # no-op instead of moving the score again.
+    already_voted = (
+        db.query(ComparisonRow)
+        .filter(
+            ComparisonRow.session_id == body.session_id,
+            ComparisonRow.video_id.in_([video_id, body.previous_video_id]),
+            ComparisonRow.previous_video_id.in_([video_id, body.previous_video_id]),
         )
+        .first()
+        is not None
     )
-    db.commit()
-    db.refresh(video)
-    db.refresh(previous)
+
+    if not already_voted:
+        if body.result != "same":
+            delta = RATING_STEP if body.result == "harder" else -RATING_STEP
+            video.difficulty_score += delta
+            previous.difficulty_score -= delta
+
+        db.add(
+            ComparisonRow(
+                video_id=video_id,
+                previous_video_id=body.previous_video_id,
+                result=body.result,
+                session_id=body.session_id,
+            )
+        )
+        db.commit()
+        db.refresh(video)
+        db.refresh(previous)
+
     return {"video": video, "previous_video": previous}
