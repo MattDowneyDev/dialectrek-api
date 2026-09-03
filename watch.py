@@ -6,7 +6,7 @@ from typing import Literal
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import ForeignKey, String, create_engine
+from sqlalchemy import ForeignKey, String, create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 load_dotenv()
@@ -41,10 +41,26 @@ class VideoRow(Base):
     duration_seconds: Mapped[int]
     difficulty_score: Mapped[float] = mapped_column(default=DEFAULT_RATING)
     like_count: Mapped[int] = mapped_column(default=0)
+    # Tracks when title/channel/duration were last pulled from the YouTube
+    # Data API, and whether the video was still there the last time we
+    # checked. YouTube's API terms cap cached data at 30 days before it must
+    # be refreshed -- refresh_metadata.py re-syncs anything older than that
+    # (see STALE_AFTER_DAYS) and flips is_available off for videos that have
+    # gone private/deleted, so a stale title/duration never keeps serving.
+    is_available: Mapped[bool] = mapped_column(default=True)
+    metadata_synced_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
 
 class LikeRow(Base):
     __tablename__ = "likes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    video_id: Mapped[str] = mapped_column(ForeignKey("videos.id"))
+    session_id: Mapped[str] = mapped_column(String)
+
+
+class DislikeRow(Base):
+    __tablename__ = "dislikes"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     video_id: Mapped[str] = mapped_column(ForeignKey("videos.id"))
@@ -64,6 +80,16 @@ class ComparisonRow(Base):
 
 Base.metadata.create_all(bind=engine)
 
+# create_all only creates missing tables, not missing columns on tables that
+# already existed -- is_available/metadata_synced_at were added after some
+# deployments already had a videos table, so add them by hand if needed.
+_existing_video_columns = {col["name"] for col in inspect(engine).get_columns("videos")}
+with engine.begin() as _conn:
+    if "is_available" not in _existing_video_columns:
+        _conn.execute(text("ALTER TABLE videos ADD COLUMN is_available BOOLEAN DEFAULT TRUE"))
+    if "metadata_synced_at" not in _existing_video_columns:
+        _conn.execute(text("ALTER TABLE videos ADD COLUMN metadata_synced_at TIMESTAMP"))
+
 
 def get_db():
     db = SessionLocal()
@@ -75,12 +101,16 @@ def get_db():
 
 def level_for_score(score: float) -> str:
     if score < 700:
-        return "novice"
+        return "a1"
+    if score < 850:
+        return "a2"
     if score < 1000:
-        return "beginner"
+        return "b1"
+    if score < 1150:
+        return "b2"
     if score < 1300:
-        return "intermediate"
-    return "advanced"
+        return "c1"
+    return "c2"
 
 
 class VideoResponse(BaseModel):
@@ -120,7 +150,7 @@ router = APIRouter()
 
 def get_video_or_404(db: Session, language: str, video_id: str) -> VideoRow:
     video = db.get(VideoRow, video_id)
-    if not video or video.language != language:
+    if not video or video.language != language or not video.is_available:
         raise HTTPException(status_code=404, detail=f"Video '{video_id}' not found")
     return video
 
@@ -128,7 +158,7 @@ def get_video_or_404(db: Session, language: str, video_id: str) -> VideoRow:
 @router.get("/{language}/videos", response_model=VideoListResponse)
 def list_videos(
     language: str,
-    level: Literal["novice", "beginner", "intermediate", "advanced"] | None = None,
+    level: Literal["a1", "a2", "b1", "b2", "c1", "c2"] | None = None,
     sort: Literal["easiest", "hardest", "most-liked", "random"] = "random",
     # Only used for sort=random: the frontend generates one seed when a
     # browsing session starts (new filters, new sort, fresh page load) and
@@ -140,7 +170,11 @@ def list_videos(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
-    videos = db.query(VideoRow).filter(VideoRow.language == language).all()
+    videos = (
+        db.query(VideoRow)
+        .filter(VideoRow.language == language, VideoRow.is_available.is_(True))
+        .all()
+    )
 
     if level:
         videos = [v for v in videos if level_for_score(v.difficulty_score) == level]
@@ -166,17 +200,60 @@ def list_videos(
 def toggle_like(language: str, video_id: str, body: LikeRequest, db: Session = Depends(get_db)):
     video = get_video_or_404(db, language, video_id)
 
-    existing = (
+    # A session can only be in one of the two states at a time, so liking
+    # first clears any standing dislike (undoing its -1) before applying
+    # the like toggle -- that's what keeps like_count a single net score
+    # instead of letting both counts move independently.
+    existing_dislike = (
+        db.query(DislikeRow)
+        .filter_by(video_id=video_id, session_id=body.session_id)
+        .first()
+    )
+    if existing_dislike:
+        db.delete(existing_dislike)
+        video.like_count += 1
+
+    existing_like = (
         db.query(LikeRow)
         .filter_by(video_id=video_id, session_id=body.session_id)
         .first()
     )
-    if existing:
-        db.delete(existing)
+    if existing_like:
+        db.delete(existing_like)
         video.like_count -= 1
     else:
         db.add(LikeRow(video_id=video_id, session_id=body.session_id))
         video.like_count += 1
+
+    db.commit()
+    db.refresh(video)
+    return video
+
+
+@router.post("/{language}/videos/{video_id}/dislike", response_model=VideoResponse)
+def toggle_dislike(language: str, video_id: str, body: LikeRequest, db: Session = Depends(get_db)):
+    video = get_video_or_404(db, language, video_id)
+
+    existing_like = (
+        db.query(LikeRow)
+        .filter_by(video_id=video_id, session_id=body.session_id)
+        .first()
+    )
+    if existing_like:
+        db.delete(existing_like)
+        video.like_count -= 1
+
+    existing_dislike = (
+        db.query(DislikeRow)
+        .filter_by(video_id=video_id, session_id=body.session_id)
+        .first()
+    )
+    if existing_dislike:
+        db.delete(existing_dislike)
+        video.like_count += 1
+    else:
+        db.add(DislikeRow(video_id=video_id, session_id=body.session_id))
+        video.like_count -= 1
 
     db.commit()
     db.refresh(video)

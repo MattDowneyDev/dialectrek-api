@@ -28,6 +28,7 @@ import argparse
 import os
 import re
 import sys
+from datetime import datetime, timezone
 
 import requests
 from dotenv import load_dotenv
@@ -90,16 +91,33 @@ def fetch_playlist_video_ids(playlist_id: str, api_key: str) -> list[str]:
             return video_ids
 
 
-def parse_iso8601_duration(duration: str) -> int:
-    """Converts YouTube's ISO 8601 duration (e.g. "PT15M33S") to whole seconds."""
-    match = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
-    hours, minutes, seconds = (int(group) if group else 0 for group in match.groups())
-    return hours * 3600 + minutes * 60 + seconds
+def parse_iso8601_duration(duration: str) -> int | None:
+    """Converts YouTube's ISO 8601 duration (e.g. "PT15M33S") to whole seconds.
+
+    Premieres and live streams report "P0D" (a days-only duration with no
+    clock component) instead of a real PT##H##M##S length -- returns None
+    for those and any other shape this doesn't recognize, so the caller can
+    skip the video instead of crashing the whole import over one row.
+    """
+    match = re.fullmatch(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", duration)
+    if not match:
+        return None
+    days, hours, minutes, seconds = (int(group) if group else 0 for group in match.groups())
+    total = days * 86400 + hours * 3600 + minutes * 60 + seconds
+    # A real video always has a nonzero length -- 0 only shows up for the
+    # "P0D" placeholder YouTube reports for premieres/live streams that
+    # haven't aired yet, so treat it the same as an unparseable duration.
+    return total or None
 
 
-def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
-    """The videos.list endpoint takes at most 50 ids per call, so this batches them."""
-    details = []
+def fetch_videos_raw(video_ids: list[str], api_key: str) -> list[dict]:
+    """The videos.list endpoint takes at most 50 ids per call, so this batches them.
+
+    Returns the raw API items (snippet + contentDetails) keyed by video id.
+    Ids that no longer resolve -- deleted or made private -- are simply
+    absent from the response, which callers use to detect that.
+    """
+    items = []
     for start in range(0, len(video_ids), 50):
         batch = video_ids[start : start + 50]
         response = requests.get(
@@ -108,15 +126,25 @@ def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
             timeout=10,
         )
         response.raise_for_status()
-        for item in response.json()["items"]:
-            details.append(
-                {
-                    "id": item["id"],
-                    "title": item["snippet"]["title"],
-                    "channel": item["snippet"]["channelTitle"],
-                    "duration_seconds": parse_iso8601_duration(item["contentDetails"]["duration"]),
-                }
-            )
+        items.extend(response.json()["items"])
+    return items
+
+
+def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
+    details = []
+    for item in fetch_videos_raw(video_ids, api_key):
+        duration_seconds = parse_iso8601_duration(item["contentDetails"]["duration"])
+        if duration_seconds is None:
+            print(f"Skipping '{item['snippet']['title']}' -- no fixed duration (likely a premiere/live stream)")
+            continue
+        details.append(
+            {
+                "id": item["id"],
+                "title": item["snippet"]["title"],
+                "channel": item["snippet"]["channelTitle"],
+                "duration_seconds": duration_seconds,
+            }
+        )
     return details
 
 
@@ -134,6 +162,7 @@ def import_channel(channel: str, language: str):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        now = datetime.now(timezone.utc)
         for video in videos:
             # Keyed by youtube id so re-running an import (or importing a
             # channel that overlaps with a previous one) updates the same
@@ -148,6 +177,8 @@ def import_channel(channel: str, language: str):
                     duration_seconds=video["duration_seconds"],
                     difficulty_score=DEFAULT_RATING,
                     like_count=0,
+                    is_available=True,
+                    metadata_synced_at=now,
                 )
             )
         db.commit()
