@@ -14,14 +14,23 @@ The free tier's daily quota (10,000 units) covers this easily -- listing a
 channel's uploads and fetching video details costs about 1 unit per 50
 videos, so even a channel with a thousand videos is ~40 units.
 
-Every imported video starts at the same neutral difficulty rating and zero
-likes. There's no reasonable way to eyeball difficulty across an entire
-channel's back catalog by hand -- the Elo comparisons in watch.py are what
-actually rank these as real votes come in.
+Every imported video starts at the same difficulty rating (DEFAULT_RATING
+unless --rating overrides it) and zero likes. There's no reasonable way to
+eyeball difficulty *within* a channel's back catalog by hand -- the Elo
+comparisons in watch.py are what actually rank these against each other as
+real votes come in. --rating just gets a whole new channel into roughly
+the right neighborhood up front.
+
+Pass --rating to seed every video in the channel at a specific difficulty
+instead of DEFAULT_RATING -- handy for a channel you already know skews
+easy or hard, so it doesn't take a bunch of Elo comparisons to migrate out
+of the neutral bucket. Roughly: a1 < 700, a2 < 850, b1 < 1000, b2 < 1150,
+c1 < 1300, c2 >= 1300 (see level_for_score in watch.py).
 
 Usage:
     venv/bin/python import_channel.py --channel @luisitocomunica --language es
     venv/bin/python import_channel.py --channel UCxxxxxxxxxxxxxxxxxxxxxx --language es
+    venv/bin/python import_channel.py --channel @easyspanish0505 --language es --rating 650
 """
 
 import argparse
@@ -148,7 +157,7 @@ def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
     return details
 
 
-def import_channel(channel: str, language: str):
+def import_channel(channel: str, language: str, rating: float = DEFAULT_RATING):
     api_key = get_api_key()
 
     uploads_playlist_id, channel_title = resolve_uploads_playlist(channel, api_key)
@@ -175,7 +184,7 @@ def import_channel(channel: str, language: str):
                     title=video["title"],
                     channel=video["channel"],
                     duration_seconds=video["duration_seconds"],
-                    difficulty_score=DEFAULT_RATING,
+                    difficulty_score=rating,
                     like_count=0,
                     is_available=True,
                     metadata_synced_at=now,
@@ -191,5 +200,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--channel", required=True, help="Channel handle (e.g. @luisitocomunica) or UC... channel id")
     parser.add_argument("--language", required=True, help="Language code to tag these videos with, e.g. es")
+    parser.add_argument(
+        "--rating",
+        type=float,
+        default=DEFAULT_RATING,
+        help=f"Difficulty score to seed every imported video with (default {DEFAULT_RATING}, the neutral rating)",
+    )
     args = parser.parse_args()
-    import_channel(args.channel, args.language)
+    import_channel(args.channel, args.language, args.rating)
