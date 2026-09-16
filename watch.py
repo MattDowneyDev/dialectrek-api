@@ -1,3 +1,4 @@
+import math
 import os
 import random
 from datetime import datetime, timezone
@@ -18,12 +19,44 @@ connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite")
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
-# Starting rating for a video with no comparisons yet, and how many points a
-# single "harder/easier" vote moves the two videos being compared. These are
-# arbitrary Elo-style constants -- what matters is the gap between them, not
-# the absolute numbers.
+# Starting rating for a video with no comparisons yet, on the same 400-point
+# logistic scale Elo uses -- that's why the CEFR cutoffs in level_for_score
+# didn't need to change when this moved from Elo to Glicko. DEFAULT_RD is the
+# starting rating deviation (Glickman's "RD"): how uncertain we are about
+# that rating. A vote between two low-RD videos barely moves either one; a
+# vote involving a fresh video swings its own rating hard until enough
+# comparisons pull its RD down.
 DEFAULT_RATING = 1000.0
-RATING_STEP = 40.0
+DEFAULT_RD = 350.0
+
+# Glicko constant that converts the 400-point logistic scale into the
+# natural-log scale the rating math is defined in (Glickman, "Parameter
+# Estimation in Large Dynamic Paired Comparison Experiments", 1999).
+_Q = math.log(10) / 400
+
+
+def _g(rd: float) -> float:
+    """Shrinks the impact of an opponent's rating in proportion to how
+    uncertain (high-RD) that opponent's own rating still is."""
+    return 1 / math.sqrt(1 + 3 * _Q**2 * rd**2 / math.pi**2)
+
+
+def _expected_score(rating: float, opponent_rating: float, opponent_rd: float) -> float:
+    return 1 / (1 + 10 ** (-_g(opponent_rd) * (rating - opponent_rating) / 400))
+
+
+def _glicko_update(
+    rating: float, rd: float, opponent_rating: float, opponent_rd: float, score: float
+) -> tuple[float, float]:
+    """Single-comparison Glicko update: how `rating`/`rd` move after playing
+    one game worth `score` (1.0 win, 0.5 draw, 0.0 loss) against an opponent.
+    Call it once per side with the score mirrored for the other video."""
+    g_opp = _g(opponent_rd)
+    e = _expected_score(rating, opponent_rating, opponent_rd)
+    d_squared = 1 / (_Q**2 * g_opp**2 * e * (1 - e))
+    new_rd = math.sqrt(1 / (1 / rd**2 + 1 / d_squared))
+    new_rating = rating + _Q * new_rd**2 * g_opp * (score - e)
+    return new_rating, new_rd
 
 
 class Base(DeclarativeBase):
@@ -40,6 +73,7 @@ class VideoRow(Base):
     channel: Mapped[str] = mapped_column(String)
     duration_seconds: Mapped[int]
     difficulty_score: Mapped[float] = mapped_column(default=DEFAULT_RATING)
+    rating_deviation: Mapped[float] = mapped_column(default=DEFAULT_RD)
     like_count: Mapped[int] = mapped_column(default=0)
     # Tracks when title/channel/duration were last pulled from the YouTube
     # Data API, and whether the video was still there the last time we
@@ -71,6 +105,11 @@ class ComparisonRow(Base):
     __tablename__ = "comparisons"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # video_id is whichever video the viewer picked as harder; result is kept
+    # around for older rows (back when a vote could also be "easier" or
+    # "same") but is always "harder" now that a vote is just picking the
+    # harder of the two thumbnails -- video_id/previous_video_id alone say
+    # which video that was.
     video_id: Mapped[str] = mapped_column(ForeignKey("videos.id"))
     previous_video_id: Mapped[str] = mapped_column(ForeignKey("videos.id"))
     result: Mapped[str] = mapped_column(String)
@@ -89,6 +128,15 @@ with engine.begin() as _conn:
         _conn.execute(text("ALTER TABLE videos ADD COLUMN is_available BOOLEAN DEFAULT TRUE"))
     if "metadata_synced_at" not in _existing_video_columns:
         _conn.execute(text("ALTER TABLE videos ADD COLUMN metadata_synced_at TIMESTAMP"))
+    if "rating_deviation" not in _existing_video_columns:
+        _conn.execute(
+            text(f"ALTER TABLE videos ADD COLUMN rating_deviation FLOAT DEFAULT {DEFAULT_RD}")
+        )
+        # Existing rows predate rating_deviation and get the column's default
+        # via ALTER TABLE ... DEFAULT, but that only applies going forward on
+        # some backends -- set it explicitly so every already-imported video
+        # starts as uncertain as a brand new one, not at 0.
+        _conn.execute(text(f"UPDATE videos SET rating_deviation = {DEFAULT_RD} WHERE rating_deviation IS NULL"))
 
 
 def get_db():
@@ -130,14 +178,15 @@ class LikeRequest(BaseModel):
 
 
 class CompareRequest(BaseModel):
-    previous_video_id: str
-    result: Literal["easier", "same", "harder"]
+    # The video in the URL path is always the one the viewer picked as
+    # harder -- this is just the other half of the pair.
+    easier_video_id: str
     session_id: str
 
 
 class CompareResponse(BaseModel):
-    video: VideoResponse
-    previous_video: VideoResponse
+    harder_video: VideoResponse
+    easier_video: VideoResponse
 
 
 class VideoListResponse(BaseModel):
@@ -264,8 +313,8 @@ def toggle_dislike(language: str, video_id: str, body: LikeRequest, db: Session 
 def compare_videos(
     language: str, video_id: str, body: CompareRequest, db: Session = Depends(get_db)
 ):
-    video = get_video_or_404(db, language, video_id)
-    previous = get_video_or_404(db, language, body.previous_video_id)
+    harder = get_video_or_404(db, language, video_id)
+    easier = get_video_or_404(db, language, body.easier_video_id)
 
     # Same dedupe idea as toggle_like, but a compare isn't a toggle -- once a
     # session has voted on this pair, in either order, later attempts are a
@@ -274,29 +323,43 @@ def compare_videos(
         db.query(ComparisonRow)
         .filter(
             ComparisonRow.session_id == body.session_id,
-            ComparisonRow.video_id.in_([video_id, body.previous_video_id]),
-            ComparisonRow.previous_video_id.in_([video_id, body.previous_video_id]),
+            ComparisonRow.video_id.in_([video_id, body.easier_video_id]),
+            ComparisonRow.previous_video_id.in_([video_id, body.easier_video_id]),
         )
         .first()
         is not None
     )
 
     if not already_voted:
-        if body.result != "same":
-            delta = RATING_STEP if body.result == "harder" else -RATING_STEP
-            video.difficulty_score += delta
-            previous.difficulty_score -= delta
+        # Both updates read each other's pre-update rating/RD, so compute
+        # them from the original values before either one is written.
+        new_harder_rating, new_harder_rd = _glicko_update(
+            harder.difficulty_score,
+            harder.rating_deviation,
+            easier.difficulty_score,
+            easier.rating_deviation,
+            1.0,
+        )
+        new_easier_rating, new_easier_rd = _glicko_update(
+            easier.difficulty_score,
+            easier.rating_deviation,
+            harder.difficulty_score,
+            harder.rating_deviation,
+            0.0,
+        )
+        harder.difficulty_score, harder.rating_deviation = new_harder_rating, new_harder_rd
+        easier.difficulty_score, easier.rating_deviation = new_easier_rating, new_easier_rd
 
         db.add(
             ComparisonRow(
                 video_id=video_id,
-                previous_video_id=body.previous_video_id,
-                result=body.result,
+                previous_video_id=body.easier_video_id,
+                result="harder",
                 session_id=body.session_id,
             )
         )
         db.commit()
-        db.refresh(video)
-        db.refresh(previous)
+        db.refresh(harder)
+        db.refresh(easier)
 
-    return {"video": video, "previous_video": previous}
+    return {"harder_video": harder, "easier_video": easier}

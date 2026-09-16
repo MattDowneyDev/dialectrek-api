@@ -15,16 +15,16 @@ channel's uploads and fetching video details costs about 1 unit per 50
 videos, so even a channel with a thousand videos is ~40 units.
 
 Every imported video starts at the same difficulty rating (DEFAULT_RATING
-unless --rating overrides it) and zero likes. There's no reasonable way to
-eyeball difficulty *within* a channel's back catalog by hand -- the Elo
-comparisons in watch.py are what actually rank these against each other as
-real votes come in. --rating just gets a whole new channel into roughly
-the right neighborhood up front.
+unless --rating overrides it), the same starting uncertainty (DEFAULT_RD),
+and zero likes. There's no reasonable way to eyeball difficulty *within* a
+channel's back catalog by hand -- the Glicko comparisons in watch.py are
+what actually rank these against each other as real votes come in. --rating
+just gets a whole new channel into roughly the right neighborhood up front.
 
 Pass --rating to seed every video in the channel at a specific difficulty
 instead of DEFAULT_RATING -- handy for a channel you already know skews
-easy or hard, so it doesn't take a bunch of Elo comparisons to migrate out
-of the neutral bucket. Roughly: a1 < 700, a2 < 850, b1 < 1000, b2 < 1150,
+easy or hard, so it doesn't take a bunch of Glicko comparisons to migrate
+out of the neutral bucket. Roughly: a1 < 700, a2 < 850, b1 < 1000, b2 < 1150,
 c1 < 1300, c2 >= 1300 (see level_for_score in watch.py).
 
 Usage:
