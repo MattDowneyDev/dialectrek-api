@@ -14,6 +14,10 @@ The free tier's daily quota (10,000 units) covers this easily -- listing a
 channel's uploads and fetching video details costs about 1 unit per 50
 videos, so even a channel with a thousand videos is ~40 units.
 
+Videos shorter than MIN_DURATION_SECONDS or longer than MAX_DURATION_SECONDS
+are skipped -- shorts and hour-plus streams don't fit the "watch one, rank
+it" flow this feature is built around.
+
 Every imported video starts at the same difficulty rating (DEFAULT_RATING
 unless --rating overrides it), the same starting uncertainty (DEFAULT_RD),
 and zero likes. There's no reasonable way to eyeball difficulty *within* a
@@ -47,6 +51,12 @@ from watch import Base, DEFAULT_RATING, SessionLocal, VideoRow, engine
 load_dotenv()
 
 API_BASE = "https://www.googleapis.com/youtube/v3"
+
+# Shorts and hour-plus streams/compilations don't fit the "watch one video,
+# rank it" flow this feature is built around -- filtered out at import time
+# rather than in watch.py so they never make it into the ratings pool at all.
+MIN_DURATION_SECONDS = 60
+MAX_DURATION_SECONDS = 3600
 
 
 def get_api_key() -> str:
@@ -145,6 +155,9 @@ def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
         duration_seconds = parse_iso8601_duration(item["contentDetails"]["duration"])
         if duration_seconds is None:
             print(f"Skipping '{item['snippet']['title']}' -- no fixed duration (likely a premiere/live stream)")
+            continue
+        if duration_seconds < MIN_DURATION_SECONDS or duration_seconds > MAX_DURATION_SECONDS:
+            print(f"Skipping '{item['snippet']['title']}' -- duration {duration_seconds}s outside {MIN_DURATION_SECONDS}-{MAX_DURATION_SECONDS}s range")
             continue
         details.append(
             {
