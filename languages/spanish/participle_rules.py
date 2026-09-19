@@ -66,7 +66,11 @@ def conjugate_past_participle(verb: str) -> str:
     if ending == "ar":
         return stem + "ado"
 
-    if stem and stem[-1] in "aeiou" and stem[-2:] not in ("gu", "qu"):
+    # Only a stem ending in a strong vowel (a/e/o) creates a hiatus that
+    # needs a written accent before the "-ido" ending (leído, caído). A
+    # stem-final weak vowel (i/u) forms a diphthong with that "i" instead,
+    # so it takes no accent: construido, huido, not construído, huído.
+    if stem and stem[-1] in "aeo" and stem[-2:] not in ("gu", "qu"):
         return stem + "ído"
     return stem + "ido"
 

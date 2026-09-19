@@ -47,6 +47,13 @@ STEM_CHANGE_MAP = {
 #  construir -> construyó/construyeron). Affects indices 2 and 5 only.
 I_TO_Y_VERBS = {"leer", "creer", "oír", "construir", "destruir", "incluir", "influir", "caer"}
 
+# Of the I_TO_Y_VERBS above, only the ones whose stem ends in a strong
+# vowel (a/e/o) need an accent on the "i" in tú/nosotros/vosotros to keep
+# it a separate syllable (leíste, caíste). The -uir verbs' stems end in
+# "u" -- a weak vowel -- so "ui" is read as one diphthong and takes no
+# accent: construiste, not construíste.
+STRONG_VOWEL_STEM_I_TO_Y_VERBS = {"leer", "creer", "oír", "caer"}
+
 # "Strong stem" irregulars all share one special ending set (no
 # accents, different vowel pattern) regardless of -ar/-er/-ir.
 STRONG_PRETERITE_ENDINGS = ["e", "iste", "o", "imos", "isteis", "ieron"]
@@ -134,10 +141,10 @@ def conjugate_preterite_indicative(verb, pronoun_index):
         base_ending = REGULAR_ENDINGS[ending][pronoun_index]  # "ió" or "ieron"
         return stem + base_ending.replace("i", "y", 1)
 
-    # 4b. Vowel-stem verbs (leer, caer, oír...) need an accent on the "i"
-    # in tú/nosotros/vosotros to keep it a separate syllable -- leíste,
+    # 4b. Strong-vowel-stem verbs (leer, caer, oír...) need an accent on the
+    # "i" in tú/nosotros/vosotros to keep it a separate syllable -- leíste,
     # leímos, leísteis, not leiste, leimos, leisteis.
-    if verb in I_TO_Y_VERBS and pronoun_index in (1, 3, 4):
+    if verb in STRONG_VOWEL_STEM_I_TO_Y_VERBS and pronoun_index in (1, 3, 4):
         accented_endings = {1: "íste", 3: "ímos", 4: "ísteis"}
         return stem + accented_endings[pronoun_index]
 
