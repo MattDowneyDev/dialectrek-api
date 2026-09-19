@@ -245,6 +245,11 @@ def list_videos(
     return {"items": page, "has_more": offset + limit < len(videos)}
 
 
+@router.get("/{language}/videos/{video_id}", response_model=VideoResponse)
+def get_video(language: str, video_id: str, db: Session = Depends(get_db)):
+    return get_video_or_404(db, language, video_id)
+
+
 @router.post("/{language}/videos/{video_id}/like", response_model=VideoResponse)
 def toggle_like(language: str, video_id: str, body: LikeRequest, db: Session = Depends(get_db)):
     video = get_video_or_404(db, language, video_id)
