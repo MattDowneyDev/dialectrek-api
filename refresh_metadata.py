@@ -6,8 +6,9 @@ writes that data once, at import time, so this is the other half: it finds
 every video last synced more than STALE_AFTER_DAYS ago, re-fetches it in
 batches of 50 (same videos.list endpoint import_channel.py uses), and updates
 the row. A video that no longer comes back from the API -- deleted or made
-private -- gets marked unavailable instead, which hides it from list_videos
-and get_video_or_404 in watch.py.
+private -- or that the uploader has since disabled embedding on, gets marked
+unavailable instead, which hides it from list_videos and get_video_or_404 in
+watch.py.
 
 Meant to run on a schedule (see refresh_handler.py for the Lambda entry
 point), but it's also fine to run by hand:
@@ -63,7 +64,11 @@ def refresh_stale_videos() -> dict:
                     row.channel = item["snippet"]["channelTitle"]
                     if duration_seconds is not None:
                         row.duration_seconds = duration_seconds
-                    row.is_available = True
+                    # An uploader can toggle embedding off (or back on) after
+                    # import, same as they can delete/reupload -- either way
+                    # is_available should track whether the frontend's iframe
+                    # player can actually show it right now.
+                    row.is_available = item["status"]["embeddable"]
                     row.metadata_synced_at = now
                     updated += 1
 

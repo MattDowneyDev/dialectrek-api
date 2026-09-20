@@ -16,7 +16,9 @@ videos, so even a channel with a thousand videos is ~40 units.
 
 Videos shorter than MIN_DURATION_SECONDS or longer than MAX_DURATION_SECONDS
 are skipped -- shorts and hour-plus streams don't fit the "watch one, rank
-it" flow this feature is built around.
+it" flow this feature is built around. Videos with embedding disabled by the
+uploader are skipped too, since they'd fail to play in the frontend's iframe
+player.
 
 Every imported video starts at the same difficulty rating (DEFAULT_RATING
 unless --rating overrides it), the same starting uncertainty (DEFAULT_RD),
@@ -132,16 +134,16 @@ def parse_iso8601_duration(duration: str) -> int | None:
 def fetch_videos_raw(video_ids: list[str], api_key: str) -> list[dict]:
     """The videos.list endpoint takes at most 50 ids per call, so this batches them.
 
-    Returns the raw API items (snippet + contentDetails) keyed by video id.
-    Ids that no longer resolve -- deleted or made private -- are simply
-    absent from the response, which callers use to detect that.
+    Returns the raw API items (snippet + contentDetails + status) keyed by
+    video id. Ids that no longer resolve -- deleted or made private -- are
+    simply absent from the response, which callers use to detect that.
     """
     items = []
     for start in range(0, len(video_ids), 50):
         batch = video_ids[start : start + 50]
         response = requests.get(
             f"{API_BASE}/videos",
-            params={"part": "snippet,contentDetails", "id": ",".join(batch), "key": api_key},
+            params={"part": "snippet,contentDetails,status", "id": ",".join(batch), "key": api_key},
             timeout=10,
         )
         response.raise_for_status()
@@ -158,6 +160,12 @@ def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
             continue
         if duration_seconds < MIN_DURATION_SECONDS or duration_seconds > MAX_DURATION_SECONDS:
             print(f"Skipping '{item['snippet']['title']}' -- duration {duration_seconds}s outside {MIN_DURATION_SECONDS}-{MAX_DURATION_SECONDS}s range")
+            continue
+        if not item["status"]["embeddable"]:
+            # The uploader has disabled embedding for this video -- it would
+            # 101/150 error in the frontend's iframe player, so it's not
+            # worth importing at all.
+            print(f"Skipping '{item['snippet']['title']}' -- embedding disabled by uploader")
             continue
         details.append(
             {
