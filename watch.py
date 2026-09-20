@@ -70,7 +70,7 @@ class VideoRow(Base):
     language: Mapped[str] = mapped_column(String, index=True)
     youtube_id: Mapped[str] = mapped_column(String)
     title: Mapped[str] = mapped_column(String)
-    channel: Mapped[str] = mapped_column(String)
+    channel: Mapped[str] = mapped_column(String, index=True)
     duration_seconds: Mapped[int]
     difficulty_score: Mapped[float] = mapped_column(default=DEFAULT_RATING)
     rating_deviation: Mapped[float] = mapped_column(default=DEFAULT_RD)
@@ -137,6 +137,11 @@ with engine.begin() as _conn:
         # some backends -- set it explicitly so every already-imported video
         # starts as uncertain as a brand new one, not at 0.
         _conn.execute(text(f"UPDATE videos SET rating_deviation = {DEFAULT_RD} WHERE rating_deviation IS NULL"))
+    # create_all() only adds indexes when it creates a table from scratch, so
+    # a channel index added after the table already existed in prod needs to
+    # be created by hand too, same as the columns above. IF NOT EXISTS makes
+    # this safe to run on every startup.
+    _conn.execute(text("CREATE INDEX IF NOT EXISTS ix_videos_channel ON videos (channel)"))
 
 
 def get_db():
@@ -248,6 +253,31 @@ def list_videos(
 @router.get("/{language}/videos/{video_id}", response_model=VideoResponse)
 def get_video(language: str, video_id: str, db: Session = Depends(get_db)):
     return get_video_or_404(db, language, video_id)
+
+
+@router.get("/{language}/videos/{video_id}/related", response_model=list[VideoResponse])
+def list_related_videos(
+    language: str,
+    video_id: str,
+    limit: int = Query(12, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Other videos from the same channel, for the "more from this creator"
+    rail under the player -- most-liked first, since that's the closest
+    signal this app has to "worth watching next" for a given channel."""
+    video = get_video_or_404(db, language, video_id)
+    return (
+        db.query(VideoRow)
+        .filter(
+            VideoRow.language == language,
+            VideoRow.channel == video.channel,
+            VideoRow.is_available.is_(True),
+            VideoRow.id != video_id,
+        )
+        .order_by(VideoRow.like_count.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 @router.post("/{language}/videos/{video_id}/like", response_model=VideoResponse)
