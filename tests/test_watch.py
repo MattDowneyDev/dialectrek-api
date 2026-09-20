@@ -108,6 +108,58 @@ class TestGetVideo:
         assert client.get("/es/videos/v1").status_code == 404
 
 
+class TestListRelatedVideos:
+    def test_returns_other_videos_from_the_same_channel(self, client, make_video):
+        make_video(id="v1", channel="Creator A")
+        make_video(id="v2", channel="Creator A")
+        make_video(id="v3", channel="Creator B")
+
+        response = client.get("/es/videos/v1/related")
+        assert response.status_code == 200
+        ids = [v["id"] for v in response.json()]
+        assert ids == ["v2"]
+
+    def test_excludes_the_video_itself(self, client, make_video):
+        make_video(id="v1", channel="Creator A")
+
+        response = client.get("/es/videos/v1/related")
+        assert response.json() == []
+
+    def test_excludes_unavailable_videos(self, client, make_video):
+        make_video(id="v1", channel="Creator A")
+        make_video(id="v2", channel="Creator A", is_available=False)
+
+        response = client.get("/es/videos/v1/related")
+        assert response.json() == []
+
+    def test_excludes_videos_from_another_language(self, client, make_video):
+        make_video(id="v1", channel="Creator A", language="es")
+        make_video(id="v2", channel="Creator A", language="fr")
+
+        response = client.get("/es/videos/v1/related")
+        assert response.json() == []
+
+    def test_orders_by_like_count_descending(self, client, make_video):
+        make_video(id="v1", channel="Creator A", like_count=0)
+        make_video(id="popular", channel="Creator A", like_count=10)
+        make_video(id="mid", channel="Creator A", like_count=5)
+
+        response = client.get("/es/videos/v1/related")
+        ids = [v["id"] for v in response.json()]
+        assert ids == ["popular", "mid"]
+
+    def test_respects_limit(self, client, make_video):
+        make_video(id="v1", channel="Creator A")
+        for i in range(3):
+            make_video(id=f"other{i}", channel="Creator A")
+
+        response = client.get("/es/videos/v1/related", params={"limit": 2})
+        assert len(response.json()) == 2
+
+    def test_missing_video_is_404(self, client):
+        assert client.get("/es/videos/does-not-exist/related").status_code == 404
+
+
 class TestToggleLike:
     def test_liking_increments_like_count(self, client, make_video):
         make_video(id="v1", like_count=0)
