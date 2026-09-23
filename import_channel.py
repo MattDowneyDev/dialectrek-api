@@ -18,7 +18,8 @@ Videos shorter than MIN_DURATION_SECONDS or longer than MAX_DURATION_SECONDS
 are skipped -- shorts and hour-plus streams don't fit the "watch one, rank
 it" flow this feature is built around. Videos with embedding disabled by the
 uploader are skipped too, since they'd fail to play in the frontend's iframe
-player.
+player. Videos in the blacklisted_videos table (see blacklist_video.py) are
+skipped as well -- that's how a video removed from the app stays removed.
 
 Every imported video starts at the same difficulty rating (DEFAULT_RATING
 unless --rating overrides it), the same starting uncertainty (DEFAULT_RD),
@@ -48,7 +49,7 @@ from datetime import datetime, timezone
 import requests
 from dotenv import load_dotenv
 
-from watch import Base, DEFAULT_RATING, SessionLocal, VideoRow, engine
+from watch import Base, BlacklistedVideoRow, DEFAULT_RATING, SessionLocal, VideoRow, engine
 
 load_dotenv()
 
@@ -151,9 +152,12 @@ def fetch_videos_raw(video_ids: list[str], api_key: str) -> list[dict]:
     return items
 
 
-def fetch_video_details(video_ids: list[str], api_key: str) -> list[dict]:
+def fetch_video_details(video_ids: list[str], api_key: str, blacklisted_ids: set[str]) -> list[dict]:
     details = []
     for item in fetch_videos_raw(video_ids, api_key):
+        if item["id"] in blacklisted_ids:
+            print(f"Skipping '{item['snippet']['title']}' -- blacklisted")
+            continue
         duration_seconds = parse_iso8601_duration(item["contentDetails"]["duration"])
         if duration_seconds is None:
             print(f"Skipping '{item['snippet']['title']}' -- no fixed duration (likely a premiere/live stream)")
@@ -187,9 +191,15 @@ def import_channel(channel: str, language: str, rating: float = DEFAULT_RATING):
     video_ids = fetch_playlist_video_ids(uploads_playlist_id, api_key)
     print(f"Found {len(video_ids)} videos, fetching details...")
 
-    videos = fetch_video_details(video_ids, api_key)
-
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        blacklisted_ids = {row.youtube_id for row in db.query(BlacklistedVideoRow).all()}
+    finally:
+        db.close()
+
+    videos = fetch_video_details(video_ids, api_key, blacklisted_ids)
+
     db = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
