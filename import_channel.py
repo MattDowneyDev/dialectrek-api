@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 import requests
 from dotenv import load_dotenv
 
-from watch import Base, BlacklistedVideoRow, DEFAULT_RATING, SessionLocal, VideoRow, engine
+from watch import Base, BlacklistedVideoRow, DEFAULT_RATING, DEFAULT_RD, SessionLocal, VideoRow, engine
 
 load_dotenv()
 
@@ -207,20 +207,38 @@ def import_channel(channel: str, language: str, rating: float = DEFAULT_RATING):
             # Keyed by youtube id so re-running an import (or importing a
             # channel that overlaps with a previous one) updates the same
             # row instead of creating a duplicate.
-            db.merge(
-                VideoRow(
-                    id=f"{language}-{video['id']}",
-                    language=language,
-                    youtube_id=video["id"],
-                    title=video["title"],
-                    channel=video["channel"],
-                    duration_seconds=video["duration_seconds"],
-                    difficulty_score=rating,
-                    like_count=0,
-                    is_available=True,
-                    metadata_synced_at=now,
+            row_id = f"{language}-{video['id']}"
+            existing = db.get(VideoRow, row_id)
+
+            if existing is not None:
+                existing.title = video["title"]
+                existing.channel = video["channel"]
+                existing.duration_seconds = video["duration_seconds"]
+                existing.is_available = True
+                existing.metadata_synced_at = now
+                # rating_deviation only moves off DEFAULT_RD once a video has
+                # been through at least one real Glicko comparison -- once
+                # that's happened, a reimport (even with --rating) must never
+                # clobber the real rating with a flat reseed value. like_count
+                # is left alone unconditionally since it's real like/dislike
+                # history, not seed data.
+                if existing.rating_deviation == DEFAULT_RD:
+                    existing.difficulty_score = rating
+            else:
+                db.add(
+                    VideoRow(
+                        id=row_id,
+                        language=language,
+                        youtube_id=video["id"],
+                        title=video["title"],
+                        channel=video["channel"],
+                        duration_seconds=video["duration_seconds"],
+                        difficulty_score=rating,
+                        like_count=0,
+                        is_available=True,
+                        metadata_synced_at=now,
+                    )
                 )
-            )
         db.commit()
         print(f"Imported {len(videos)} videos from '{channel_title}' into watch.db")
     finally:
