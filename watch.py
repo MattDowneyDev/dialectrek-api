@@ -85,6 +85,22 @@ class VideoRow(Base):
     metadata_synced_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
 
+class BlacklistedVideoRow(Base):
+    """Videos that were deliberately removed and must never come back.
+
+    Checked by import_channel.py before a video is inserted, so re-running an
+    import on a channel that includes one of these doesn't reimport it. Keyed
+    by youtube_id alone (not language) so a video already imported under
+    multiple languages is blocked in all of them at once.
+    """
+
+    __tablename__ = "blacklisted_videos"
+
+    youtube_id: Mapped[str] = mapped_column(String, primary_key=True)
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+
 class LikeRow(Base):
     __tablename__ = "likes"
 
