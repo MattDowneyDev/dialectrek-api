@@ -12,9 +12,10 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 
 load_dotenv()
 
-# DATABASE_URL points at Neon in production (set as a Lambda env var) and
-# falls back to a local SQLite file so nobody needs a real DB for dev.
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./watch.db")
+# DATABASE_URL points at Neon -- a Lambda env var in production, and .env
+# locally (local dev uses the same prod DB for now). The sqlite branch is
+# only for the test suite's throwaway DB (see tests/conftest.py).
+DATABASE_URL = os.environ["DATABASE_URL"]
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

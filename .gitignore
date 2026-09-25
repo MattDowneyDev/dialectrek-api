@@ -61,9 +61,6 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Local SQLite database (see watch.py) -- everyone seeds their own copy.
-*.db
-
 # Flask stuff:
 instance/
 .webassets-cache
