@@ -1,5 +1,5 @@
 """Blacklists a video so import_channel.py never (re)imports it, and by
-default deletes any rows already in watch.db for it (all languages, plus
+default deletes any rows already in the database for it (all languages, plus
 their likes/dislikes/comparisons).
 
 Usage:

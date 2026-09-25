@@ -1,4 +1,4 @@
-"""Bulk-imports every public video from a YouTube channel into watch.db.
+"""Bulk-imports every public video from a YouTube channel into the database.
 
 Uses the official YouTube Data API v3 rather than scraping the channel
 page -- same "use the approved API" principle as the embedded player in
@@ -240,7 +240,7 @@ def import_channel(channel: str, language: str, rating: float = DEFAULT_RATING):
                     )
                 )
         db.commit()
-        print(f"Imported {len(videos)} videos from '{channel_title}' into watch.db")
+        print(f"Imported {len(videos)} videos from '{channel_title}' into the database")
     finally:
         db.close()
 
